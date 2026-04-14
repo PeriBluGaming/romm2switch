@@ -1,6 +1,6 @@
 FROM devkitpro/devkitarm:latest
 
-# Installiere devkitA64 explizit
+# Installiere devkitA64 und alle Dependencies
 RUN dkp-pacman -Syyu --noconfirm && \
     dkp-pacman -S --noconfirm \
     devkitA64 \
@@ -9,7 +9,10 @@ RUN dkp-pacman -Syyu --noconfirm && \
     switch-sdl2 \
     switch-sdl2_ttf \
     switch-curl \
-    switch-mbedtls
+    switch-mbedtls \
+    switch-libjpeg-turbo \
+    switch-libwebp \
+    switch-libpng
 
 ENV DEVKITPRO=/opt/devkitpro
 ENV DEVKITARM=/opt/devkitpro/devkitA64
