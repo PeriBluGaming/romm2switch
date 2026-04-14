@@ -270,6 +270,6 @@ void DetailScreen::render() {
     else if (m_dlState == DownloadState::Done)
         hint = "X Download Again  B Back";
     else
-        hint = "Downloading...  B Back (download continues)";
+        hint = "Downloading...  B Cancel & Back";
     R.drawStatusBar(hint);
 }
