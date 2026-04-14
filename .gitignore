@@ -1,0 +1,17 @@
+# Build artifacts
+build/
+*.nro
+*.nso
+*.elf
+*.nacp
+*.pfs0
+*.map
+
+# Editor files
+.vscode/
+*.swp
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
