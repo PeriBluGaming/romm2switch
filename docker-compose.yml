@@ -1,8 +1,11 @@
-version: '3.8'
 services:
   build:
     build: .
-    working_dir: /app
+    environment:
+      - DEVKITPRO=/opt/devkitpro
+      - DEVKITARM=/opt/devkitpro/devkitA64
     volumes:
       - .:/app
-    command: make
+      - /app/build
+    working_dir: /app
+    command: bash -c "make clean && make"
