@@ -1,10 +1,9 @@
 FROM devkitpro/devkitarm:latest
 
-# Aktualisiere devkitPro Package Manager
-RUN dkp-pacman -Syu --noconfirm
-
-# Installiere Switch-spezifische Libraries IN KORREKTER REIHENFOLGE
-RUN dkp-pacman -S --noconfirm \
+# Aktualisiere und installiere alle notwendigen Pakete
+RUN dkp-pacman -Syyu --noconfirm && \
+    dkp-pacman -S --noconfirm \
+    switch-pkg-config \
     switch-harfbuzz \
     switch-freetype \
     switch-bzip2 \
@@ -16,5 +15,9 @@ RUN dkp-pacman -S --noconfirm \
     switch-mbedtls \
     switch-libjpeg-turbo \
     switch-libwebp
+
+# Setze Environment-Variablen
+ENV DEVKITPRO=/opt/devkitpro
+ENV DEVKITARM=/opt/devkitpro/devkitARM
 
 WORKDIR /app
