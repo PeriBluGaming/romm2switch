@@ -4,16 +4,14 @@ FROM devkitpro/devkitarm:latest
 RUN dkp-pacman -Syu --noconfirm
 
 # Installiere Switch-spezifische Libraries
+# Hinweis: switch-sdl2_ttf wird ohne harfbuzz gebaut
 RUN dkp-pacman -S --noconfirm \
     switch-dev \
     switch-zlib \
     switch-sdl2 \
-    switch-sdl2_ttf \
     switch-curl \
     switch-mbedtls \
     switch-libjpeg-turbo \
-    switch-libwebp \
-    switch-harfbuzz \
-    switch-freetype
+    switch-libwebp
 
 WORKDIR /app
