@@ -5,13 +5,9 @@ RUN dkp-pacman -Syu --noconfirm
 
 # Installiere Switch-spezifische Libraries
 # Hinweis: switch-sdl2_ttf wird ohne harfbuzz gebaut
-RUN dkp-pacman -S --noconfirm \
-    switch-dev \
-    switch-zlib \
-    switch-sdl2 \
-    switch-curl \
-    switch-mbedtls \
-    switch-libjpeg-turbo \
-    switch-libwebp
+RUN dkp-pacman -S switch-dev switch-sdl2 switch-sdl2_ttf \
+              switch-curl switch-mbedtls \
+              switch-libpng switch-libjpeg-turbo switch-libwebp \
+              switch-zlib switch-bzip2 switch-freetype
 
 WORKDIR /app
