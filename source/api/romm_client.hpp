@@ -3,17 +3,23 @@
 #include "models/models.hpp"
 #include "config.hpp"
 
+#include <atomic>
 #include <functional>
 #include <string>
 #include <vector>
 
 namespace romm {
 
+// Maximum number of ROMs to fetch per platform / collection
+static constexpr int ROM_PAGE_SIZE = 500;
+
 // Progress callback: (bytesDownloaded, totalBytes)
 using ProgressCallback = std::function<void(long long, long long)>;
 
 class RommClient {
 public:
+    // NOTE: curl_global_init() must be called by the application before
+    // constructing RommClient, and curl_global_cleanup() after destroying it.
     explicit RommClient(const Config& config);
     ~RommClient();
 
@@ -32,9 +38,12 @@ public:
     // --- Download ---
     // Downloads a ROM to destPath (full path including filename).
     // progressCb is called periodically with (bytesReceived, totalBytes).
+    // cancelFlag: if set to true during the download, the transfer is aborted.
     // Returns true on success.
     bool downloadRom(const Rom& rom, const std::string& destPath,
-                     ProgressCallback progressCb, std::string& errorOut);
+                     ProgressCallback progressCb,
+                     const std::atomic<bool>& cancelFlag,
+                     std::string& errorOut);
 
 private:
     Config m_config;
@@ -44,7 +53,7 @@ private:
     // Perform a GET request; returns HTTP body or empty string on error.
     std::string httpGet(const std::string& url, std::string& errorOut);
 
-    // Perform a POST request with JSON body; returns HTTP body or empty on error.
+    // Perform a POST request; returns HTTP body or empty on error.
     std::string httpPost(const std::string& url, const std::string& body,
                          std::string& errorOut);
 

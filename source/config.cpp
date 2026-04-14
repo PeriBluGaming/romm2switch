@@ -83,7 +83,7 @@ Config loadConfig() {
 
 bool saveConfig(const Config& cfg) {
     // Ensure directory exists
-    mkdir(CONFIG_DIR, 0777);
+    mkdir(CONFIG_DIR, 0755);
 
     FILE* f = fopen(CONFIG_PATH, "w");
     if (!f) return false;

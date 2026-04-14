@@ -34,12 +34,13 @@ private:
 
     // Download state
     enum class DownloadState { Idle, Downloading, Done, Failed };
-    DownloadState        m_dlState   = DownloadState::Idle;
+    DownloadState          m_dlState   = DownloadState::Idle;
     std::atomic<long long> m_dlRecv{0};
     std::atomic<long long> m_dlTotal{1};
-    std::string          m_dlError;
-    std::thread          m_dlThread;
-    std::string          m_dlDestPath;
+    std::atomic<bool>      m_dlCancel{false};
+    std::string            m_dlError;
+    std::thread            m_dlThread;
+    std::string            m_dlDestPath;
 
     static constexpr int HEADER_H  = 60;
     static constexpr int STATUS_H  = 44;

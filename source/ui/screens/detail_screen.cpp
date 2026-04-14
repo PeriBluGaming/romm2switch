@@ -51,6 +51,7 @@ void DetailScreen::startDownload() {
     m_dlState    = DownloadState::Downloading;
     m_dlRecv     = 0;
     m_dlTotal    = (m_rom.fileSizeBytes > 0) ? m_rom.fileSizeBytes : 1;
+    m_dlCancel   = false;
 
     // Join any previous thread
     if (m_dlThread.joinable()) m_dlThread.join();
@@ -63,6 +64,7 @@ void DetailScreen::startDownload() {
                 m_dlRecv  = recv;
                 m_dlTotal = (total > 0) ? total : 1;
             },
+            m_dlCancel,
             err);
 
         if (ok) {
@@ -114,8 +116,12 @@ bool DetailScreen::update(const SDL_Event& event) {
             break;
         case SDLK_b:
         case SDLK_B:
-            // Wait for download thread before navigating away
-            if (m_dlThread.joinable()) m_dlThread.detach();
+            // Signal download cancellation and wait for the thread to finish
+            // before navigating away to avoid dangling references.
+            if (m_dlState == DownloadState::Downloading) {
+                m_dlCancel = true;
+            }
+            if (m_dlThread.joinable()) m_dlThread.join();
             navigateTo("back", 0);
             break;
         default: break;

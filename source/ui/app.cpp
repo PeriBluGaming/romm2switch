@@ -11,6 +11,7 @@
 #include <switch.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
+#include <curl/curl.h>
 #include <array>
 
 // ---------------------------------------------------------------------------
@@ -105,6 +106,9 @@ bool App::init() {
     socketInitializeDefault();
     plInitialize(PlServiceType_User);
 
+    // Initialize libcurl once for the process lifetime
+    curl_global_init(CURL_GLOBAL_ALL);
+
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK) < 0) return false;
     if (TTF_Init() < 0) { SDL_Quit(); return false; }
 
@@ -157,6 +161,7 @@ void App::cleanup() {
 
     TTF_Quit();
     SDL_Quit();
+    curl_global_cleanup();
     plExit();
     socketExit();
 }

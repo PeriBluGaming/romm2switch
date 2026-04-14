@@ -130,6 +130,7 @@ static size_t writeStringCb(char* ptr, size_t size, size_t nmemb, void* userdata
 struct DownloadState {
     FILE* fp;
     romm::ProgressCallback cb;
+    const std::atomic<bool>* cancel;
 };
 
 static size_t writeFileCb(char* ptr, size_t size, size_t nmemb, void* userdata) {
@@ -144,7 +145,9 @@ static int progressCb(void* userdata, curl_off_t dltotal, curl_off_t dlnow,
         state->cb(static_cast<long long>(dlnow),
                   static_cast<long long>(dltotal));
     }
-    return 0; // returning non-zero aborts
+    // Return non-zero to abort if cancellation has been requested
+    if (state->cancel && state->cancel->load()) return 1;
+    return 0;
 }
 
 } // anonymous namespace
@@ -207,13 +210,14 @@ RommClient::RommClient(const Config& config)
     , m_curl(nullptr)
     , m_cookieJarPath("sdmc:/config/romm2switch/cookies.txt")
 {
-    curl_global_init(CURL_GLOBAL_ALL);
+    // curl_global_init() must be called once per process by the application
+    // before constructing any RommClient instance.
     m_curl = curl_easy_init();
 }
 
 RommClient::~RommClient() {
     if (m_curl) curl_easy_cleanup(static_cast<CURL*>(m_curl));
-    curl_global_cleanup();
+    // curl_global_cleanup() is called by the application, not here.
 }
 
 std::string RommClient::apiUrl(const std::string& path) const {
@@ -298,7 +302,7 @@ std::string RommClient::httpPost(const std::string& url, const std::string& body
 
 bool RommClient::login(std::string& errorOut) {
     // Ensure cookie directory exists
-    mkdir("sdmc:/config/romm2switch", 0777);
+    mkdir("sdmc:/config/romm2switch", 0755);
 
     // RomM login: POST /api/auth/login  (form-encoded username/password)
     CURL* curl = static_cast<CURL*>(m_curl);
@@ -356,7 +360,8 @@ std::vector<Platform> RommClient::getPlatforms(std::string& errorOut) {
 
 std::vector<Rom> RommClient::getRoms(int platformId, std::string& errorOut) {
     std::string url = apiUrl("/api/roms?platform_id=" +
-                             std::to_string(platformId) + "&size=500");
+                             std::to_string(platformId) +
+                             "&size=" + std::to_string(ROM_PAGE_SIZE));
     std::string body = httpGet(url, errorOut);
     if (body.empty()) return {};
 
@@ -380,7 +385,7 @@ std::vector<Rom> RommClient::getRoms(int platformId, std::string& errorOut) {
 std::vector<Rom> RommClient::getRomsByCollection(int collectionId,
                                                    std::string& errorOut) {
     std::string url = apiUrl("/api/collections/" + std::to_string(collectionId) +
-                             "/roms?size=500");
+                             "/roms?size=" + std::to_string(ROM_PAGE_SIZE));
     std::string body = httpGet(url, errorOut);
     if (body.empty()) return {};
 
@@ -419,6 +424,7 @@ Rom RommClient::getRom(int romId, std::string& errorOut) {
 
 bool RommClient::downloadRom(const Rom& rom, const std::string& destPath,
                               ProgressCallback progressCb,
+                              const std::atomic<bool>& cancelFlag,
                               std::string& errorOut) {
     // Ensure destination directory exists by creating all parent dirs
     {
@@ -430,10 +436,10 @@ bool RommClient::downloadRom(const Rom& rom, const std::string& destPath,
             for (size_t i = 1; i < dir.size(); ++i) {
                 if (dir[i] == '/') {
                     std::string sub = dir.substr(0, i);
-                    mkdir(sub.c_str(), 0777);
+                    mkdir(sub.c_str(), 0755);
                 }
             }
-            mkdir(dir.c_str(), 0777);
+            mkdir(dir.c_str(), 0755);
         }
     }
 
@@ -446,18 +452,22 @@ bool RommClient::downloadRom(const Rom& rom, const std::string& destPath,
     std::string url = apiUrl("/api/roms/" + std::to_string(rom.id) +
                              "/content/" + rom.fileName);
 
-    DownloadState state{fp, progressCb};
+    DownloadState state{fp, progressCb, &cancelFlag};
     CURL* curl = static_cast<CURL*>(m_curl);
 
     curl_easy_reset(curl);
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeFileCb);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &state);
-    curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, progressCb ? ::progressCb : nullptr);
+    // Always set XFERINFO so we can check the cancel flag periodically
+    curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, ::progressCb);
     curl_easy_setopt(curl, CURLOPT_XFERINFODATA, &state);
-    curl_easy_setopt(curl, CURLOPT_NOPROGRESS, progressCb ? 0L : 1L);
+    curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
     curl_easy_setopt(curl, CURLOPT_TIMEOUT, 0L); // No timeout for large files
+    // SSL peer verification is disabled to support self-signed certificates
+    // commonly used on home servers. The user is connecting to a server they
+    // configured themselves, so MITM risk is low in this context.
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
     curl_easy_setopt(curl, CURLOPT_COOKIEFILE, m_cookieJarPath.c_str());
@@ -466,8 +476,14 @@ bool RommClient::downloadRom(const Rom& rom, const std::string& destPath,
     CURLcode res = curl_easy_perform(curl);
     fclose(fp);
 
+    if (cancelFlag.load()) {
+        remove(destPath.c_str()); // Clean up partial file on cancellation
+        errorOut = "Download cancelled.";
+        return false;
+    }
+
     if (res != CURLE_OK) {
-        remove(destPath.c_str()); // Clean up partial file
+        remove(destPath.c_str()); // Clean up partial file on error
         errorOut = curl_easy_strerror(res);
         return false;
     }
