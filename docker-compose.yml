@@ -1,0 +1,8 @@
+version: '3.8'
+services:
+  build:
+    image: devkitpro/devkitarm:latest
+    working_dir: /app/source
+    volumes:
+      - .:/app
+    command: make
