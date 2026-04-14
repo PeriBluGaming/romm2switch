@@ -12,6 +12,8 @@ RUN dkp-pacman -S --noconfirm \
     switch-curl \
     switch-mbedtls \
     switch-libjpeg-turbo \
-    switch-libwebp
+    switch-libwebp \
+    switch-harfbuzz \
+    switch-freetype
 
 WORKDIR /app
