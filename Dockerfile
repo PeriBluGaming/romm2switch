@@ -1,9 +1,9 @@
 FROM devkitpro/devkitarm:latest
 
-# Installiere devkitPro Libraries für Switch
-RUN apt-get update && apt-get install -y \
-    libnx-dev \
-    switch-tools \
-    && rm -rf /var/lib/apt/lists/*
+# Aktualisiere devkitPro Package Manager
+RUN dkp-pacman -Syu --noconfirm
+
+# Installiere Switch-spezifische Libraries
+RUN dkp-pacman -S --noconfirm switch-dev switch-zlib
 
 WORKDIR /app
