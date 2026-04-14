@@ -86,7 +86,7 @@ bool GameScreen::update(const SDL_Event& event) {
         }
         if (event.type == SDL_KEYDOWN) {
             switch (event.key.keysym.sym) {
-            case SDLK_BACKSPACE:
+            case SDLK_bACKSPACE:
                 if (!m_filter.empty()) {
                     m_filter.pop_back();
                     applyFilter();
@@ -134,7 +134,7 @@ bool GameScreen::update(const SDL_Event& event) {
             SDL_StartTextInput();
             break;
         case SDLK_b:
-        case SDLK_B:
+        case SDLK_b:
             navigateTo("main", 0);
             break;
         default: break;

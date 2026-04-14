@@ -58,7 +58,7 @@ bool CollectionScreen::update(const SDL_Event& event) {
                 navigateTo("games_collection",
                            m_collections[static_cast<size_t>(m_selected)].id);
             break;
-        case SDLK_B:
+        case SDLK_b:
             navigateTo("main", 0);
             break;
         default: break;

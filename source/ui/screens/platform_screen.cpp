@@ -57,7 +57,7 @@ bool PlatformScreen::update(const SDL_Event& event) {
             if (!m_platforms.empty())
                 navigateTo("games_platform", m_platforms[static_cast<size_t>(m_selected)].id);
             break;
-        case SDLK_B:
+        case SDLK_b:
             navigateTo("main", 0);
             break;
         default: break;

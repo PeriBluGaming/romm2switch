@@ -42,7 +42,7 @@ bool LoginScreen::update(const SDL_Event& event) {
             m_statusMsg.clear();
             SDL_StartTextInput();
             break;
-        case SDLK_B:        // B button — go back / cancel edit
+        case SDLK_b:        // B button — go back / cancel edit
             navigateTo("main", 0);
             break;
         case SDLK_X:        // X button — save
@@ -78,7 +78,7 @@ void LoginScreen::handleTextInput(const SDL_Event& event) {
             m_editing = false;
             SDL_StopTextInput();
             break;
-        case SDLK_BACKSPACE:
+        case SDLK_bACKSPACE:
             if (!field.empty()) field.pop_back();
             break;
         default: break;
