@@ -78,7 +78,7 @@ void LoginScreen::handleTextInput(const SDL_Event& event) {
             m_editing = false;
             SDL_StopTextInput();
             break;
-        case SDLK_bACKSPACE:
+        case SDLK_BACKSPACE:
             if (!field.empty()) field.pop_back();
             break;
         default: break;
