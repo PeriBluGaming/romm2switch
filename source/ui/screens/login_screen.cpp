@@ -45,7 +45,7 @@ bool LoginScreen::update(const SDL_Event& event) {
         case SDLK_b:        // B button — go back / cancel edit
             navigateTo("main", 0);
             break;
-        case SDLK_X:        // X button — save
+        case SDLK_x:        // X button — save
         {
             // Basic validation
             if (m_config.serverUrl.empty()) {

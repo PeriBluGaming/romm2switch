@@ -107,14 +107,13 @@ bool DetailScreen::update(const SDL_Event& event) {
         case SDLK_RETURN:
         case SDLK_KP_ENTER:
         case SDLK_x:
-        case SDLK_X:
+        case SDLK_x:
             if (m_dlState == DownloadState::Idle ||
                 m_dlState == DownloadState::Failed ||
                 m_dlState == DownloadState::Done) {
                 startDownload();
             }
             break;
-        case SDLK_b:
         case SDLK_b:
             // Signal download cancellation and wait for the thread to finish
             // before navigating away to avoid dangling references.
