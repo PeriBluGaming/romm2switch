@@ -4,6 +4,6 @@ FROM devkitpro/devkitarm:latest
 RUN dkp-pacman -Syu --noconfirm
 
 # Installiere Switch-spezifische Libraries
-RUN dkp-pacman -S --noconfirm switch-dev switch-zlib
+RUN dkp-pacman -S --noconfirm switch-dev switch-zlib switch-sdl2
 
 WORKDIR /app
