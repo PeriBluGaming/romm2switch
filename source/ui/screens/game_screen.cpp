@@ -94,6 +94,7 @@ bool GameScreen::update(const SDL_Event& event) {
                 break;
             case SDLK_RETURN:
             case SDLK_ESCAPE:
+            case SDLK_b:       // B button — cancel filter mode
                 m_filterMode = false;
                 SDL_StopTextInput();
                 break;

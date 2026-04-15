@@ -75,6 +75,7 @@ void LoginScreen::handleTextInput(const SDL_Event& event) {
         case SDLK_RETURN:
         case SDLK_KP_ENTER:
         case SDLK_ESCAPE:
+        case SDLK_b:           // B button — cancel editing
             m_editing = false;
             SDL_StopTextInput();
             break;
