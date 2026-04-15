@@ -32,6 +32,11 @@ download ROMs directly to your SD card.
 
 ![Browse Grid View](docs/images/game-list-grid.jpg)
 
+## Documentation
+
+[English Documentation](docs/guide.md)
+[German Documentation](docs/anleitung.md)
+
 ---
 
 ## Pre-built Releases
