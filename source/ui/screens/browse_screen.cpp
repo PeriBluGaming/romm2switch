@@ -433,8 +433,12 @@ void BrowseScreen::renderSidebar() {
         int y = SIDEBAR_LIST_Y + (i - m_sidebarScroll) * SIDEBAR_ITEM_H;
         bool selected = (i == m_sidebarSel) && focused;
 
-        R.fillRect(0, y, SIDEBAR_W - 1, SIDEBAR_ITEM_H,
-                   selected ? Color::CardHover : Color::SidebarBg);
+        R.fillRect(8, y + 4, SIDEBAR_W - 18, SIDEBAR_ITEM_H - 8,
+                   selected ? Color::Card : Color::SidebarBg);
+        if (selected) {
+            R.fillRect(8, y + 4, 4, SIDEBAR_ITEM_H - 8, Color::CardHover);
+            R.drawRect(8, y + 4, SIDEBAR_W - 18, SIDEBAR_ITEM_H - 8, Color::Separator);
+        }
 
         // Item name
         std::string name;
@@ -453,16 +457,16 @@ void BrowseScreen::renderSidebar() {
         int maxNameW = SIDEBAR_W - 80;
         std::string display = truncateText(name, maxNameW, R.fontSmall(), R);
 
-        R.drawText(display, 12, y + (SIDEBAR_ITEM_H - 20) / 2,
-                   selected ? Color::TextWhite : Color::Text, R.fontSmall());
+        R.drawText(display, 18, y + (SIDEBAR_ITEM_H - 20) / 2,
+                   Color::Text, R.fontSmall());
 
         // ROM count (right-aligned)
         int cw = R.textWidth(countStr, R.fontSmall());
-        R.drawText(countStr, SIDEBAR_W - cw - 16, y + (SIDEBAR_ITEM_H - 20) / 2,
+        R.drawText(countStr, SIDEBAR_W - cw - 20, y + (SIDEBAR_ITEM_H - 20) / 2,
                    Color::TextDim, R.fontSmall());
 
         // Separator
-        R.fillRect(12, y + SIDEBAR_ITEM_H - 1, SIDEBAR_W - 24, 1, Color::Separator);
+        R.fillRect(18, y + SIDEBAR_ITEM_H - 1, SIDEBAR_W - 36, 1, Color::Separator);
     }
 
     // Scroll indicator for sidebar
@@ -471,7 +475,7 @@ void BrowseScreen::renderSidebar() {
         float offset = static_cast<float>(m_sidebarScroll) / count;
         int   barH   = std::max(10, static_cast<int>(SIDEBAR_LIST_H * ratio));
         int   barY   = SIDEBAR_LIST_Y + static_cast<int>(SIDEBAR_LIST_H * offset);
-        R.fillRect(SIDEBAR_W - 5, barY, 3, barH, Color::CardHover);
+        R.fillRect(SIDEBAR_W - 6, barY, 4, barH, Color::CardHover);
     }
 
     // Highlight indicator when sidebar is not focused but has selection
@@ -521,18 +525,22 @@ void BrowseScreen::renderListView() {
         int y       = CONTENT_Y + (i - m_contentScroll) * LIST_ITEM_H;
         bool selected = (i == m_contentSel) && focused;
 
-        R.fillRect(MAIN_X, y, MAIN_W, LIST_ITEM_H,
-                   selected ? Color::CardHover : Color::Background);
+        int cardX = MAIN_X + 10;
+        int cardW = MAIN_W - 20;
+        int cardY = y + 6;
+        int cardH = LIST_ITEM_H - 12;
+        R.fillRect(cardX, cardY, cardW, cardH, selected ? Color::Card : Color::Header);
+        R.drawRect(cardX, cardY, cardW, cardH, selected ? Color::CardHover : Color::Separator);
 
-        int textX = MAIN_X + 16;
+        int textX = cardX + 12;
 
         // Show small cover thumbnail in list view
         auto it = m_coverCache.find(rom.id);
         if (it != m_coverCache.end() && it->second) {
             int thumbH = LIST_ITEM_H - 10;
             int thumbW = thumbH * 3 / 4; // approximate aspect ratio
-            R.drawTextureFit(it->second, MAIN_X + 10, y + 5, thumbW, thumbH);
-            textX = MAIN_X + 10 + thumbW + 10;
+            R.drawTextureFit(it->second, cardX + 10, cardY + 4, thumbW, thumbH);
+            textX = cardX + 10 + thumbW + 10;
         }
 
         // ROM name
@@ -551,7 +559,9 @@ void BrowseScreen::renderListView() {
         }
 
         // Separator
-        R.fillRect(MAIN_X, y + LIST_ITEM_H - 1, MAIN_W, 1, Color::Separator);
+        if (selected) {
+            R.fillRect(cardX, cardY, 4, cardH, Color::CardHover);
+        }
     }
 
     // Scroll indicator
@@ -560,7 +570,7 @@ void BrowseScreen::renderListView() {
         float offset = static_cast<float>(m_contentScroll) / gameCount();
         int   barH   = std::max(10, static_cast<int>(CONTENT_H * ratio));
         int   barY   = CONTENT_Y + static_cast<int>(CONTENT_H * offset);
-        R.fillRect(SCREEN_W - 6, barY, 4, barH, Color::CardHover);
+            R.fillRect(SCREEN_W - 6, barY, 4, barH, Color::CardHover);
     }
 }
 
@@ -591,7 +601,9 @@ void BrowseScreen::renderGridView() {
 
             // Cell background
             R.fillRect(cellX, cellY, GRID_CELL_W, GRID_CELL_H,
-                       selected ? Color::CardHover : Color::Card);
+                       selected ? Color::Card : Color::Header);
+            R.drawRect(cellX, cellY, GRID_CELL_W, GRID_CELL_H,
+                       selected ? Color::CardHover : Color::Separator);
 
             // Cover image area
             auto it = m_coverCache.find(rom.id);
@@ -626,7 +638,8 @@ void BrowseScreen::renderGridView() {
 
             // Selection border
             if (selected) {
-                R.drawRect(cellX, cellY, GRID_CELL_W, GRID_CELL_H, Color::TextWhite);
+                R.fillRect(cellX, cellY, GRID_CELL_W, 3, Color::CardHover);
+                R.drawRect(cellX, cellY, GRID_CELL_W, GRID_CELL_H, Color::CardHover);
             }
         }
     }

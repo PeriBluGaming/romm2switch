@@ -90,7 +90,7 @@ void LoginScreen::handleTextInput(const SDL_Event& event) {
 void LoginScreen::render() {
     auto& R = m_renderer;
     R.fillRect(0, 0, SCREEN_W, SCREEN_H, Color::Background);
-    R.drawHeader("RomM2Switch - Settings");
+    R.drawHeader("Settings");
 
     int cy = HEADER_H + START_Y;
     for (int i = 0; i < static_cast<int>(Field::COUNT); ++i) {
@@ -102,12 +102,15 @@ void LoginScreen::render() {
                    FIELD_X - 200, cy + 16, Color::TextDim);
 
         // Input box
-        SDL_Color boxColor = editing   ? Color::CardHover
-                           : selected  ? Color::CardHover
-                                       : Color::Card;
+        SDL_Color boxColor = editing   ? Color::Card
+                           : selected  ? Color::Card
+                                       : Color::Header;
         R.fillRect(FIELD_X, cy, FIELD_W, FIELD_H, boxColor);
         R.drawRect(FIELD_X, cy, FIELD_W, FIELD_H,
-                   editing ? Color::CardHover : Color::Separator);
+                   editing ? Color::CardHover : (selected ? Color::CardHover : Color::Separator));
+        if (selected) {
+            R.fillRect(FIELD_X, cy, 4, FIELD_H, Color::CardHover);
+        }
 
         // Field value (mask password)
         const std::string& val = *m_fields[static_cast<size_t>(i)];

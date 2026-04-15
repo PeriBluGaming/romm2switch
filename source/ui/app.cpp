@@ -149,34 +149,38 @@ public:
         R.fillRect(0, 0, SCREEN_W, SCREEN_H, Color::Background);
         R.drawHeader("RomM2Switch");
 
+        R.drawTextCentered("Simple access to your ROM library",
+                           0, HEADER_H + 20, SCREEN_W,
+                           Color::TextDim, R.fontSmall());
+
         if (!m_hasConfig) {
             R.drawTextCentered("Server not configured.",
-                               0, SCREEN_H / 2 - 60, SCREEN_W,
+                               0, SCREEN_H / 2 - 86, SCREEN_W,
                                Color::Error, R.fontLarge());
             R.drawTextCentered("Please open Settings to enter your RomM server details.",
-                               0, SCREEN_H / 2, SCREEN_W,
+                               0, SCREEN_H / 2 - 42, SCREEN_W,
                                Color::TextDim, R.fontSmall());
         } else if (m_loggedIn) {
             R.drawTextCentered("Connected to RomM",
-                               0, HEADER_H + 20, SCREEN_W,
+                               0, HEADER_H + 48, SCREEN_W,
                                Color::Success, R.fontSmall());
         } else if (!m_loginError.empty()) {
             R.drawTextCentered("Login failed: " + m_loginError,
-                               0, HEADER_H + 20, SCREEN_W,
+                               0, HEADER_H + 48, SCREEN_W,
                                Color::Error, R.fontSmall());
         }
 
-        int startY = HEADER_H + 80;
+        int startY = HEADER_H + 140;
         for (int i = 0; i < static_cast<int>(m_items.size()); ++i) {
             bool sel = (i == m_selected);
-            int  y   = startY + i * 90;
+            int  y   = startY + i * 82;
 
-            int  bw  = 400, bh = 60;
+            int  bw  = 460, bh = 64;
             int  bx  = (SCREEN_W - bw) / 2;
             R.fillRect(bx, y, bw, bh, sel ? Color::CardHover : Color::Card);
-            R.drawRect(bx, y, bw, bh, sel ? Color::CardHover : Color::Separator);
+            R.drawRect(bx, y, bw, bh, sel ? Color::TextWhite : Color::Separator);
             R.drawTextCentered(m_items[static_cast<size_t>(i)], bx, y + (bh - 26) / 2,
-                               bw, sel ? Color::TextWhite : Color::Text,
+                               bw, sel ? Color::TextWhite : Color::TextWhite,
                                R.fontLarge());
         }
 
@@ -400,7 +404,7 @@ void App::run() {
 
         if (!m_current) break;
 
-        SDL_SetRenderDrawColor(m_sdlRend, 13, 17, 23, 255);
+        SDL_SetRenderDrawColor(m_sdlRend, 11, 15, 20, 255);
         SDL_RenderClear(m_sdlRend);
 
         m_current->render();

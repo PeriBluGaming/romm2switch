@@ -245,7 +245,9 @@ void DetailScreen::render() {
         int bw = 300, bh = 46;
         int bx = (SCREEN_W - bw) / 2;
         int by = dlY + 8;
-        R.fillRect(bx, by, bw, bh, Color::CardHover);
+        R.fillRect(bx, by, bw, bh, Color::Card);
+        R.drawRect(bx, by, bw, bh, Color::CardHover);
+        R.fillRect(bx, by, 4, bh, Color::CardHover);
         R.drawTextCentered("Download", bx, by + (bh - 26) / 2, bw,
                            Color::TextWhite, R.fontMedium());
         break;
@@ -289,8 +291,9 @@ void DetailScreen::render() {
         int bw = 280, bh = 38;
         int bx = (SCREEN_W - bw) / 2;
         int by = dlY + 42;
-        R.fillRect(bx, by, bw, bh, Color::Card);
+        R.fillRect(bx, by, bw, bh, Color::Header);
         R.drawRect(bx, by, bw, bh, Color::CardHover);
+        R.fillRect(bx, by, 4, bh, Color::CardHover);
         R.drawTextCentered("Retry (X)", bx, by + (bh - 20) / 2, bw,
                            Color::TextWhite, R.fontSmall());
         break;

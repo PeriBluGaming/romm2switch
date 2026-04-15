@@ -98,18 +98,23 @@ void CollectionScreen::render() {
         int y         = CONTENT_Y + (i - m_scrollOff) * ITEM_H;
         bool selected = (i == m_selected);
 
-        R.fillRect(0, y, SCREEN_W, ITEM_H,
-                   selected ? Color::CardHover : Color::Background);
+        R.fillRect(10, y + 6, SCREEN_W - 20, ITEM_H - 12,
+                   selected ? Color::Card : Color::Header);
+        R.drawRect(10, y + 6, SCREEN_W - 20, ITEM_H - 12,
+                   selected ? Color::CardHover : Color::Separator);
+        if (selected) {
+            R.fillRect(10, y + 6, 4, ITEM_H - 12, Color::CardHover);
+        }
 
-        R.drawText(c.name, 30, y + (ITEM_H - 26) / 2,
-                   selected ? Color::TextWhite : Color::Text);
+        R.drawText(c.name, 34, y + (ITEM_H - 26) / 2,
+                   Color::Text);
 
         std::string countStr = std::to_string(c.romCount) + " ROMs";
         int cw = R.textWidth(countStr, R.fontSmall());
         R.drawText(countStr, SCREEN_W - cw - 30, y + (ITEM_H - 20) / 2,
                    Color::TextDim, R.fontSmall());
 
-        R.fillRect(0, y + ITEM_H - 1, SCREEN_W, 1, Color::Separator);
+        R.fillRect(30, y + ITEM_H - 1, SCREEN_W - 60, 1, Color::Separator);
     }
 
     if (static_cast<int>(m_collections.size()) > VISIBLE_ROWS) {

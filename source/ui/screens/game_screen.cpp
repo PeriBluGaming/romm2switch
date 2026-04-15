@@ -181,16 +181,20 @@ void GameScreen::render() {
         int  y          = CONTENT_Y + (i - m_scrollOff) * ITEM_H;
         bool selected   = (i == m_selected);
 
-        R.fillRect(0, y, SCREEN_W, ITEM_H,
-                   selected ? Color::CardHover : Color::Background);
+        R.fillRect(10, y + 6, SCREEN_W - 20, ITEM_H - 12,
+                   selected ? Color::Card : Color::Header);
+        R.drawRect(10, y + 6, SCREEN_W - 20, ITEM_H - 12,
+                   selected ? Color::CardHover : Color::Separator);
+        if (selected) {
+            R.fillRect(10, y + 6, 4, ITEM_H - 12, Color::CardHover);
+        }
 
         // ROM name
-        R.drawText(rom.name, 30, y + 14,
-                   selected ? Color::TextWhite : Color::Text);
+        R.drawText(rom.name, 34, y + 14, Color::Text);
 
         // Platform name (dim)
         if (!rom.platformName.empty()) {
-            R.drawText(rom.platformName, 30, y + 40,
+            R.drawText(rom.platformName, 34, y + 40,
                        Color::TextDim, R.fontSmall());
         }
 
@@ -202,7 +206,7 @@ void GameScreen::render() {
                        Color::TextDim, R.fontSmall());
         }
 
-        R.fillRect(0, y + ITEM_H - 1, SCREEN_W, 1, Color::Separator);
+        R.fillRect(30, y + ITEM_H - 1, SCREEN_W - 60, 1, Color::Separator);
     }
 
     // Scroll indicator

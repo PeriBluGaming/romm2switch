@@ -98,12 +98,17 @@ void PlatformScreen::render() {
         int y          = CONTENT_Y + (i - m_scrollOff) * ITEM_H;
         bool selected  = (i == m_selected);
 
-        R.fillRect(0, y, SCREEN_W, ITEM_H,
-                   selected ? Color::CardHover : Color::Background);
+        R.fillRect(10, y + 6, SCREEN_W - 20, ITEM_H - 12,
+                   selected ? Color::Card : Color::Header);
+        R.drawRect(10, y + 6, SCREEN_W - 20, ITEM_H - 12,
+                   selected ? Color::CardHover : Color::Separator);
+        if (selected) {
+            R.fillRect(10, y + 6, 4, ITEM_H - 12, Color::CardHover);
+        }
 
         // Platform name
-        R.drawText(p.name, 30, y + (ITEM_H - 26) / 2,
-                   selected ? Color::TextWhite : Color::Text);
+        R.drawText(p.name, 34, y + (ITEM_H - 26) / 2,
+                   Color::Text);
 
         // ROM count (right-aligned)
         std::string countStr = std::to_string(p.romCount) + " ROMs";
@@ -112,7 +117,7 @@ void PlatformScreen::render() {
                    Color::TextDim, R.fontSmall());
 
         // Separator line
-        R.fillRect(0, y + ITEM_H - 1, SCREEN_W, 1, Color::Separator);
+        R.fillRect(30, y + ITEM_H - 1, SCREEN_W - 60, 1, Color::Separator);
     }
 
     // Scroll indicator

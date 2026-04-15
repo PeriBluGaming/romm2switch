@@ -55,50 +55,52 @@ void Renderer::drawTextCentered(const std::string& text, int x, int y,
 
 void Renderer::drawHeader(const std::string& title) {
     fillRect(0, 0, SCREEN_W, HEADER_H, Color::Header);
-    drawText(title, 20, (HEADER_H - 32) / 2, Color::TextWhite, m_fontLarge);
+    fillRect(0, HEADER_H - 1, SCREEN_W, 1, Color::Separator);
+    drawText(title, 28, (HEADER_H - 32) / 2, Color::TextWhite, m_fontLarge);
 }
 
 void Renderer::drawStatusBar(const std::string& hint) {
     fillRect(0, SCREEN_H - STATUS_H, SCREEN_W, STATUS_H, Color::StatusBar);
     fillRect(0, SCREEN_H - STATUS_H, SCREEN_W, 1, Color::Separator);
-    drawText(hint, 20, SCREEN_H - STATUS_H + (STATUS_H - 20) / 2,
+    drawText(hint, 24, SCREEN_H - STATUS_H + (STATUS_H - 20) / 2,
              Color::TextDim, m_fontSmall);
 }
 
 void Renderer::drawProgressBar(int x, int y, int w, int h, float progress) {
+    progress = std::clamp(progress, 0.0f, 1.0f);
     fillRect(x, y, w, h, Color::ProgressBg);
     int filled = static_cast<int>(w * progress);
     if (filled > 0) fillRect(x, y, filled, h, Color::ProgressFg);
-    drawRect(x, y, w, h, Color::Separator);
+    drawRect(x, y, w, h, Color::CardHover);
 }
 
 void Renderer::drawLoadingOverlay(const std::string& message) {
     // Semi-transparent overlay
     SDL_SetRenderDrawBlendMode(m_renderer, SDL_BLENDMODE_BLEND);
-    SDL_SetRenderDrawColor(m_renderer, 0, 0, 0, 180);
+    SDL_SetRenderDrawColor(m_renderer, 7, 10, 14, 190);
     SDL_Rect overlay{0, 0, SCREEN_W, SCREEN_H};
     SDL_RenderFillRect(m_renderer, &overlay);
     SDL_SetRenderDrawBlendMode(m_renderer, SDL_BLENDMODE_NONE);
 
     // Centered box
-    int bw = 500, bh = 120;
+    int bw = 520, bh = 130;
     int bx = (SCREEN_W - bw) / 2, by = (SCREEN_H - bh) / 2;
-    fillRect(bx, by, bw, bh, Color::Card);
-    drawRect(bx, by, bw, bh, Color::CardHover);
-    drawTextCentered("Loading...", bx, by + 20, bw, Color::TextWhite, m_fontLarge);
+    fillRect(bx, by, bw, bh, Color::Header);
+    drawRect(bx, by, bw, bh, Color::Separator);
+    drawTextCentered("Loading...", bx, by + 24, bw, Color::TextWhite, m_fontLarge);
     if (!message.empty()) {
-        drawTextCentered(message, bx, by + 70, bw, Color::TextDim, m_fontSmall);
+        drawTextCentered(message, bx, by + 78, bw, Color::TextDim, m_fontSmall);
     }
 }
 
 void Renderer::drawErrorScreen(const std::string& message) {
     fillRect(0, CONTENT_Y, SCREEN_W, CONTENT_H, Color::Background);
-    int bw = 700, bh = 150;
+    int bw = 760, bh = 170;
     int bx = (SCREEN_W - bw) / 2, by = CONTENT_Y + (CONTENT_H - bh) / 2;
-    fillRect(bx, by, bw, bh, Color::Card);
+    fillRect(bx, by, bw, bh, Color::Header);
     drawRect(bx, by, bw, bh, Color::Error);
-    drawTextCentered("Error", bx, by + 15, bw, Color::Error, m_fontLarge);
-    drawTextCentered(message, bx, by + 70, bw, Color::TextDim, m_fontSmall);
+    drawTextCentered("Error", bx, by + 20, bw, Color::Error, m_fontLarge);
+    drawTextCentered(message, bx + 24, by + 86, bw - 48, Color::TextDim, m_fontSmall);
 }
 
 int Renderer::textWidth(const std::string& text, TTF_Font* font) {
