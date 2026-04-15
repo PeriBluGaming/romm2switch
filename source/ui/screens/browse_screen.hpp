@@ -71,7 +71,10 @@ private:
     // --- Cover image cache ---
     std::unordered_map<int, SDL_Texture*> m_coverCache;
     std::unordered_set<int>               m_coverRequested; // IDs already queued
-    std::deque<int>                       m_coverQueue;     // IDs to download
+
+    // Queue entries: ROM ID + cover path (needed to build the download URL)
+    struct CoverRequest { int romId; std::string coverPath; };
+    std::deque<CoverRequest>              m_coverQueue;
 
     // Background thread for cover downloading
     struct CoverResult { int romId; std::vector<uint8_t> data; };

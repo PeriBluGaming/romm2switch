@@ -145,7 +145,7 @@ The following endpoints are used:
 | GET | `/api/collections` | List collections |
 | GET | `/api/collections/{id}/roms?limit={n}` | List ROMs in a collection |
 | GET | `/api/roms/{id}` | ROM details |
-| GET | `/api/roms/{id}/cover?size=small` | ROM cover image (JPEG/PNG) |
+| GET | `{path_cover_small}` | ROM cover image (static asset, path from ROM metadata) |
 | GET | `/api/roms/{id}/content/{filename}` | Download ROM file |
 
 ---

@@ -658,7 +658,7 @@ void BrowseScreen::requestVisibleCovers() {
         if (m_coverCache.count(rom.id)) return;
         if (m_coverRequested.count(rom.id)) return;
         m_coverRequested.insert(rom.id);
-        m_coverQueue.push_back(rom.id);
+        m_coverQueue.push_back({rom.id, rom.coverPathSmall});
     };
 
     if (m_viewMode == ViewMode::List) {
@@ -695,16 +695,17 @@ void BrowseScreen::processCoverResults() {
 
 void BrowseScreen::coverWorker() {
     while (!m_coverStop.load()) {
-        int romId = -1;
+        CoverRequest req;
+        req.romId = -1;
         {
             std::lock_guard<std::mutex> lock(m_coverMutex);
             if (!m_coverQueue.empty()) {
-                romId = m_coverQueue.front();
+                req = std::move(m_coverQueue.front());
                 m_coverQueue.pop_front();
             }
         }
 
-        if (romId < 0) {
+        if (req.romId < 0) {
             std::this_thread::sleep_for(std::chrono::milliseconds(50));
             continue;
         }
@@ -712,15 +713,15 @@ void BrowseScreen::coverWorker() {
         // Skip if already cached
         {
             std::lock_guard<std::mutex> lock(m_coverMutex);
-            if (m_coverCache.count(romId)) continue;
+            if (m_coverCache.count(req.romId)) continue;
         }
 
         std::string error;
-        auto data = m_client.fetchCoverData(romId, error);
+        auto data = m_client.fetchCoverData(req.coverPath, error);
 
         if (!data.empty()) {
             std::lock_guard<std::mutex> lock(m_coverMutex);
-            m_coverResults.push_back({romId, std::move(data)});
+            m_coverResults.push_back({req.romId, std::move(data)});
         }
     }
 }

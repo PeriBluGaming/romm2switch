@@ -189,7 +189,7 @@ static Rom parseRom(const std::string& obj) {
     r.platformSlug   = jsonGet(obj, "platform_slug");
     r.platformFsSlug = jsonGet(obj, "platform_fs_slug");
     r.summary        = jsonGet(obj, "summary");
-    r.coverPathSmall = jsonGet(obj, "path_cover_s");
+    r.coverPathSmall = jsonGet(obj, "path_cover_small");
 
     // Parse regions array
     auto regionItems = jsonGetArray(obj, "regions");
@@ -513,7 +513,12 @@ bool RommClient::downloadRom(const Rom& rom, const std::string& destPath,
     return true;
 }
 
-std::vector<uint8_t> RommClient::fetchCoverData(int romId, std::string& errorOut) {
+std::vector<uint8_t> RommClient::fetchCoverData(const std::string& coverPath, std::string& errorOut) {
+    if (coverPath.empty()) {
+        errorOut = "Empty cover path";
+        return {};
+    }
+
     // Use a dedicated curl handle so this is safe to call from a background thread.
     CURL* curl = curl_easy_init();
     if (!curl) {
@@ -521,7 +526,9 @@ std::vector<uint8_t> RommClient::fetchCoverData(int romId, std::string& errorOut
         return {};
     }
 
-    std::string url = apiUrl("/api/roms/" + std::to_string(romId) + "/cover?size=small");
+    // Build the full URL: serverUrl + coverPath
+    // coverPath already starts with "/" (e.g. "/assets/romm/resources/...").
+    std::string url = apiUrl(coverPath);
     std::string response;
 
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
