@@ -92,7 +92,7 @@ Press **X** to save.  The configuration is stored at
 | + | Quit application |
 
 > **Note:** The Switch SDL2 port maps Joy-Con / Pro Controller buttons to
-> keyboard key codes automatically.  The left analog stick can also be used
+> keyboard key codes automatically. The left analog stick can also be used
 > for navigation.
 
 ---
