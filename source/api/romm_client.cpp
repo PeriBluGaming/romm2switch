@@ -310,7 +310,8 @@ std::string RommClient::httpPost(const std::string& url, const std::string& body
 
 bool RommClient::login(std::string& errorOut) {
     // With HTTP Basic Auth, credentials are sent on every request.
-    // Validate them by making a lightweight GET to /api/platforms.
+    // Validate them by making a GET to /api/platforms — a lightweight,
+    // authenticated endpoint that returns quickly and is always available.
     CURL* curl = static_cast<CURL*>(m_curl);
     std::string response;
 
