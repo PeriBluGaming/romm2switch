@@ -90,7 +90,7 @@ void LoginScreen::handleTextInput(const SDL_Event& event) {
 void LoginScreen::render() {
     auto& R = m_renderer;
     R.fillRect(0, 0, SCREEN_W, SCREEN_H, Color::Background);
-    R.drawHeader("Settings");
+    R.drawHeader("RomM2Switch - Settings");
 
     int cy = HEADER_H + START_Y;
     for (int i = 0; i < static_cast<int>(Field::COUNT); ++i) {

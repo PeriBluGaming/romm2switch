@@ -531,6 +531,9 @@ void BrowseScreen::renderListView() {
         int cardH = LIST_ITEM_H - 12;
         R.fillRect(cardX, cardY, cardW, cardH, selected ? Color::Card : Color::Header);
         R.drawRect(cardX, cardY, cardW, cardH, selected ? Color::CardHover : Color::Separator);
+        if (selected) {
+            R.fillRect(cardX, cardY, 4, cardH, Color::CardHover);
+        }
 
         int textX = cardX + 12;
 
@@ -558,10 +561,6 @@ void BrowseScreen::renderListView() {
                        Color::TextDim, R.fontSmall());
         }
 
-        // Separator
-        if (selected) {
-            R.fillRect(cardX, cardY, 4, cardH, Color::CardHover);
-        }
     }
 
     // Scroll indicator

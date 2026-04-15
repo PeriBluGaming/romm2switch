@@ -100,7 +100,7 @@ void Renderer::drawErrorScreen(const std::string& message) {
     fillRect(bx, by, bw, bh, Color::Header);
     drawRect(bx, by, bw, bh, Color::Error);
     drawTextCentered("Error", bx, by + 20, bw, Color::Error, m_fontLarge);
-    drawTextCentered(message, bx + 24, by + 86, bw - 48, Color::TextDim, m_fontSmall);
+    drawTextCentered(message, bx, by + 86, bw, Color::TextDim, m_fontSmall);
 }
 
 int Renderer::textWidth(const std::string& text, TTF_Font* font) {
