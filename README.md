@@ -34,7 +34,6 @@ download ROMs directly to your SD card.
 ## Pre-built Releases
 Download the latest release from [GitHub Releases](https://github.com/PeriBluGaming/romm2switch/releases/latest)
 
-
 ## Building from Source
 
 ### Prerequisites
