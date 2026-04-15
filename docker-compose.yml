@@ -3,7 +3,7 @@ services:
     build: .
     environment:
       - DEVKITPRO=/opt/devkitpro
-      - DEVKITARM=/opt/devkitpro/devkitA64
+      - DEVKITA64=/opt/devkitpro/devkitA64
     volumes:
       - .:/app
     working_dir: /app

@@ -49,8 +49,9 @@ CXXFLAGS := $(CFLAGS) -fno-rtti -fexceptions -std=c++17
 ASFLAGS  := -g $(ARCH)
 LDFLAGS   = -specs=$(DEVKITPRO)/libnx/switch.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
 
-LIBS := -lSDL2_ttf -lSDL2 -lcurl -lmbedtls -lmbedx509 -lmbedcrypto \
-        -lfreetype -lbz2 -lpng -ljpeg -lwebp -lz -lnx
+LIBS := -lSDL2_ttf -lSDL2 -lEGL -lglapi -ldrm_nouveau \
+        -lcurl -lmbedtls -lmbedx509 -lmbedcrypto \
+        -lfreetype -lharfbuzz -lbz2 -lpng -ljpeg -lwebp -lz -lnx
 
 #---------------------------------------------------------------------------------
 # list of directories containing libraries
