@@ -109,15 +109,16 @@ For example: `sdmc:/roms/snes/Super Mario World.sfc`
 
 ## API Compatibility
 
-Tested against **RomM v3.x**.  The following endpoints are used:
+Tested against **RomM v3.x / v4.x**.  Authentication uses **HTTP Basic Auth** — credentials are sent with every request (no login endpoint required).
+
+The following endpoints are used:
 
 | Method | Endpoint | Purpose |
 |---|---|---|
-| POST | `/api/auth/login` | Authenticate |
-| GET | `/api/platforms` | List platforms |
-| GET | `/api/roms?platform_id={id}&size=500` | List ROMs for a platform |
+| GET | `/api/platforms` | List platforms (also used to validate credentials) |
+| GET | `/api/roms?platform_ids={id}&limit={n}` | List ROMs for a platform |
 | GET | `/api/collections` | List collections |
-| GET | `/api/collections/{id}/roms?size=500` | List ROMs in a collection |
+| GET | `/api/collections/{id}/roms?limit={n}` | List ROMs in a collection |
 | GET | `/api/roms/{id}` | ROM details |
 | GET | `/api/roms/{id}/content/{filename}` | Download ROM file |
 
