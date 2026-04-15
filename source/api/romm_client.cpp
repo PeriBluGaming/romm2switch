@@ -361,7 +361,7 @@ std::vector<Platform> RommClient::getPlatforms(std::string& errorOut) {
 }
 
 std::vector<Rom> RommClient::getRoms(int platformId, std::string& errorOut) {
-    std::string url = apiUrl("/api/roms?platform_id=" +
+    std::string url = apiUrl("/api/roms?platform_ids=" +
                              std::to_string(platformId) +
                              "&limit=" + std::to_string(ROM_PAGE_SIZE));
     std::string body = httpGet(url, errorOut);
