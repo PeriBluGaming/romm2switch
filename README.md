@@ -30,6 +30,8 @@ download ROMs directly to your SD card.
 - A running [RomM](https://github.com/rommapp/romm) instance (Version 4.7.0) reachable from
   your local network (HTTP or HTTPS; self-signed certificates are accepted)
 
+![Browse Grid View](docs/images/game-list-grid.jpg)
+
 ---
 
 ## Pre-built Releases
