@@ -189,7 +189,10 @@ static Rom parseRom(const std::string& obj) {
     r.platformSlug   = jsonGet(obj, "platform_slug");
     r.platformFsSlug = jsonGet(obj, "platform_fs_slug");
     r.summary        = jsonGet(obj, "summary");
-    r.coverPathSmall = jsonGet(obj, "path_cover_small");
+    // path_cover_small may be null in JSON; jsonGet returns "null" for null values.
+    std::string cover = jsonGet(obj, "path_cover_small");
+    if (cover == "null") cover.clear();
+    r.coverPathSmall = cover;
 
     // Parse regions array
     auto regionItems = jsonGetArray(obj, "regions");
@@ -526,9 +529,25 @@ std::vector<uint8_t> RommClient::fetchCoverData(const std::string& coverPath, st
         return {};
     }
 
-    // Build the full URL: serverUrl + coverPath
-    // coverPath already starts with "/" (e.g. "/assets/romm/resources/...").
-    std::string url = apiUrl(coverPath);
+    // Build the full URL: serverUrl (without /api) + coverPath.
+    // Ensure a "/" separator between the base and the path.
+    std::string base = m_config.serverUrl;
+    while (!base.empty() && base.back() == '/') base.pop_back();
+    std::string path = coverPath;
+    if (!path.empty() && path.front() != '/') path = "/" + path;
+
+    // The cover path may contain spaces (e.g. in the ?ts= timestamp).
+    // Encode spaces as %20 so that curl handles the URL correctly.
+    std::string encoded;
+    encoded.reserve(path.size());
+    for (char c : path) {
+        if (c == ' ')
+            encoded += "%20";
+        else
+            encoded += c;
+    }
+
+    std::string url = base + encoded;
     std::string response;
 
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
