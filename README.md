@@ -1,6 +1,8 @@
 # RomM2Switch
 
+<div align="center">
 ![logo](icon.jpg)
+</div>
 
 A Nintendo Switch homebrew application (NRO) that connects to your self-hosted
 [RomM](https://github.com/rommapp/romm) installation and lets you browse and
