@@ -31,6 +31,10 @@ download ROMs directly to your SD card.
 
 ---
 
+## Pre-built Releases
+Download the latest release from [GitHub Releases](https://github.com/PeriBluGaming/romm2switch/releases/latest)
+
+
 ## Building from Source
 
 ### Prerequisites
@@ -57,6 +61,21 @@ This produces `romm2switch.nro`.
 
 Place a 256×256 pixel JPEG named `icon.jpg` in the project root before
 building to embed it in the NRO.
+
+---
+
+## Building with Docker
+
+If you don't want to install devkitPro locally, you can use Docker:
+
+### Icon
+
+Place a 256×256 pixel JPEG named icon.jpg in the project root before building to embed it in the NRO.
+
+```bash
+docker build -t romm2switch .
+docker run --rm -v $(pwd):/build romm2switch make
+```
 
 ---
 
