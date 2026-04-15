@@ -14,8 +14,9 @@ download ROMs directly to your SD card.
 
 | Feature | Details |
 |---|---|
-| 🎮 Browse Platforms | Scroll through all platforms in your RomM library |
-| 🗂️ Browse Collections | View and open any collection |
+| 🎮 Browse Platforms & Collections | Unified sidebar with tabs to switch between platforms and collections |
+| 📋 List & Grid Views | Toggle between list view and grid view with cover art thumbnails |
+| 🖼️ Cover Art | Game cover images are loaded from RomM and displayed in both views |
 | 🔍 Search ROMs | In-list search / filter by typing |
 | ℹ️ ROM Details | See file name, size, platform, region, and summary |
 | ⬇️ Download | Download ROMs to `sdmc:/roms/<platform>/` with a live progress bar |
@@ -42,7 +43,7 @@ Install [devkitPro](https://devkitpro.org/wiki/Getting_Started) and then
 install the required Switch portlibs:
 
 ```sh
-dkp-pacman -S switch-dev switch-sdl2 switch-sdl2_ttf \
+dkp-pacman -S switch-dev switch-sdl2 switch-sdl2_ttf switch-sdl2_image \
               switch-curl switch-mbedtls \
               switch-libpng switch-libjpeg-turbo switch-libwebp \
               switch-zlib switch-bzip2 switch-freetype
@@ -106,14 +107,16 @@ Press **X** to save.  The configuration is stored at
 | Button | Action |
 |---|---|
 | ↑ / ↓ | Navigate list |
+| ← / → | Switch between sidebar and content (Browse screen) |
 | A / Enter | Select / Confirm / Start editing |
-| B | Back |
+| B | Back / Return to sidebar |
 | X | Download ROM (on detail screen) / Save settings |
-| Y | Open search / filter (on game list screen) |
+| Y | Toggle between List and Grid view (Browse screen) |
+| L / R | Switch between Platforms and Collections tabs |
 
 > **Note:** The Switch SDL2 port maps Joy-Con / Pro Controller buttons to
 > keyboard key codes automatically. The mapping is:
-> A → Enter, B → B, X → X, Y → Y, D-Pad → Arrow keys.
+> A → Enter, B → B, X → X, Y → Y, D-Pad → Arrow keys, L → PageUp, R → PageDown.
 
 ---
 
@@ -142,6 +145,7 @@ The following endpoints are used:
 | GET | `/api/collections` | List collections |
 | GET | `/api/collections/{id}/roms?limit={n}` | List ROMs in a collection |
 | GET | `/api/roms/{id}` | ROM details |
+| GET | `/api/roms/{id}/cover?size=small` | ROM cover image (JPEG/PNG) |
 | GET | `/api/roms/{id}/content/{filename}` | Download ROM file |
 
 ---

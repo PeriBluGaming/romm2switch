@@ -8,6 +8,7 @@ RUN dkp-pacman -Syyu --noconfirm && \
     switch-zlib \
     switch-sdl2 \
     switch-sdl2_ttf \
+    switch-sdl2_image \
     switch-curl \
     switch-mbedtls \
     switch-libjpeg-turbo \

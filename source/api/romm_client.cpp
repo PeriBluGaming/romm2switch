@@ -3,6 +3,7 @@
 #include <curl/curl.h>
 #include <cstring>
 #include <cstdio>
+#include <cstdint>
 #include <sys/stat.h>
 
 // ---------------------------------------------------------------------------
@@ -188,6 +189,7 @@ static Rom parseRom(const std::string& obj) {
     r.platformSlug   = jsonGet(obj, "platform_slug");
     r.platformFsSlug = jsonGet(obj, "platform_fs_slug");
     r.summary        = jsonGet(obj, "summary");
+    r.coverPathSmall = jsonGet(obj, "path_cover_s");
 
     // Parse regions array
     auto regionItems = jsonGetArray(obj, "regions");
@@ -509,6 +511,45 @@ bool RommClient::downloadRom(const Rom& rom, const std::string& destPath,
     }
 
     return true;
+}
+
+std::vector<uint8_t> RommClient::fetchCoverData(int romId, std::string& errorOut) {
+    // Use a dedicated curl handle so this is safe to call from a background thread.
+    CURL* curl = curl_easy_init();
+    if (!curl) {
+        errorOut = "Failed to initialize curl handle";
+        return {};
+    }
+
+    std::string url = apiUrl("/api/roms/" + std::to_string(romId) + "/cover?size=small");
+    std::string response;
+
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeStringCb);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+    curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+    curl_easy_setopt(curl, CURLOPT_USERPWD, m_userpwd.c_str());
+
+    CURLcode res = curl_easy_perform(curl);
+
+    long httpCode = 0;
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
+    curl_easy_cleanup(curl);
+
+    if (res != CURLE_OK) {
+        errorOut = curl_easy_strerror(res);
+        return {};
+    }
+    if (httpCode >= 400) {
+        errorOut = "HTTP " + std::to_string(httpCode);
+        return {};
+    }
+
+    return std::vector<uint8_t>(response.begin(), response.end());
 }
 
 } // namespace romm

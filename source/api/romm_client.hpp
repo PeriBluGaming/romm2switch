@@ -4,6 +4,7 @@
 #include "config.hpp"
 
 #include <atomic>
+#include <cstdint>
 #include <functional>
 #include <string>
 #include <vector>
@@ -44,6 +45,12 @@ public:
                      ProgressCallback progressCb,
                      const std::atomic<bool>& cancelFlag,
                      std::string& errorOut);
+
+    // --- Cover images ---
+    // Fetches the small cover image for a ROM as raw bytes (JPEG/PNG).
+    // Uses a separate curl handle so it is safe to call from a background thread.
+    // Returns an empty vector on failure.
+    std::vector<uint8_t> fetchCoverData(int romId, std::string& errorOut);
 
 private:
     Config m_config;

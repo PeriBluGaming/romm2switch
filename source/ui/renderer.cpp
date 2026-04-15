@@ -1,5 +1,7 @@
 #include "ui/renderer.hpp"
+#include <SDL2/SDL_image.h>
 #include <cstring>
+#include <algorithm>
 
 static constexpr int HEADER_H    = 60;
 static constexpr int STATUS_H    = 44;
@@ -104,4 +106,43 @@ int Renderer::textWidth(const std::string& text, TTF_Font* font) {
     int tw = 0;
     TTF_SizeUTF8(font, text.c_str(), &tw, nullptr);
     return tw;
+}
+
+SDL_Texture* Renderer::loadTextureFromMemory(const std::vector<uint8_t>& data) {
+    if (data.empty()) return nullptr;
+
+    SDL_RWops* rw = SDL_RWFromConstMem(data.data(), static_cast<int>(data.size()));
+    if (!rw) return nullptr;
+
+    SDL_Surface* surface = IMG_Load_RW(rw, 1); // 1 = auto-close RW
+    if (!surface) return nullptr;
+
+    SDL_Texture* texture = SDL_CreateTextureFromSurface(m_renderer, surface);
+    SDL_FreeSurface(surface);
+    return texture;
+}
+
+void Renderer::drawTexture(SDL_Texture* texture, int x, int y, int w, int h) {
+    if (!texture) return;
+    SDL_Rect dst = {x, y, w, h};
+    SDL_RenderCopy(m_renderer, texture, nullptr, &dst);
+}
+
+void Renderer::drawTextureFit(SDL_Texture* texture, int x, int y, int w, int h) {
+    if (!texture) return;
+    int tw = 0, th = 0;
+    SDL_QueryTexture(texture, nullptr, nullptr, &tw, &th);
+    if (tw <= 0 || th <= 0) return;
+
+    float scaleX = static_cast<float>(w) / tw;
+    float scaleY = static_cast<float>(h) / th;
+    float scale  = std::min(scaleX, scaleY);
+
+    int dw = static_cast<int>(tw * scale);
+    int dh = static_cast<int>(th * scale);
+    int dx = x + (w - dw) / 2;
+    int dy = y + (h - dh) / 2;
+
+    SDL_Rect dst = {dx, dy, dw, dh};
+    SDL_RenderCopy(m_renderer, texture, nullptr, &dst);
 }
