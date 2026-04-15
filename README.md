@@ -149,4 +149,10 @@ The following endpoints are used:
 
 ## License
 
-MIT
+GNU General Public License v3.0 - See [LICENSE](LICENSE) for details.
+
+## Contributing & Forking
+
+If you fork this project, please:
+- ✅ Add a note in your README: "Based on [romm2switch](https://github.com/PeriBluGaming/romm2switch) by PeriBluGaming"
+- ✅ Clearly document your changes
