@@ -529,14 +529,14 @@ void BrowseScreen::renderListView() {
         // Show small cover thumbnail in list view
         auto it = m_coverCache.find(rom.id);
         if (it != m_coverCache.end() && it->second) {
-            int thumbH = LIST_ITEM_H - 8;
+            int thumbH = LIST_ITEM_H - 10;
             int thumbW = thumbH * 3 / 4; // approximate aspect ratio
-            R.drawTextureFit(it->second, MAIN_X + 8, y + 4, thumbW, thumbH);
-            textX = MAIN_X + 8 + thumbW + 8;
+            R.drawTextureFit(it->second, MAIN_X + 10, y + 5, thumbW, thumbH);
+            textX = MAIN_X + 10 + thumbW + 10;
         }
 
         // ROM name
-        R.drawText(rom.name, textX, y + 8,
+        R.drawText(rom.name, textX, y + 14,
                    selected ? Color::TextWhite : Color::Text);
 
         // Sub-info
@@ -546,7 +546,7 @@ void BrowseScreen::renderListView() {
             sub += rom.fileSizeStr();
         }
         if (!sub.empty()) {
-            R.drawText(sub, textX, y + 30,
+            R.drawText(sub, textX, y + 40,
                        Color::TextDim, R.fontSmall());
         }
 

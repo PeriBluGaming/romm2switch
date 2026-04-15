@@ -101,7 +101,7 @@ private:
     static constexpr int SIDEBAR_VISIBLE = SIDEBAR_LIST_H / SIDEBAR_ITEM_H;
 
     // List view
-    static constexpr int LIST_ITEM_H  = 55;
+    static constexpr int LIST_ITEM_H  = 70;
     static constexpr int LIST_VISIBLE = CONTENT_H / LIST_ITEM_H;
 
     // Grid view

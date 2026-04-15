@@ -13,6 +13,13 @@ DetailScreen::DetailScreen(Renderer& renderer, NavigateFn navigate,
     , m_romId(romId)
 {}
 
+DetailScreen::~DetailScreen() {
+    if (m_coverTex) {
+        SDL_DestroyTexture(m_coverTex);
+        m_coverTex = nullptr;
+    }
+}
+
 void DetailScreen::onEnter() {
     m_loading  = true;
     m_error.clear();
@@ -20,12 +27,26 @@ void DetailScreen::onEnter() {
     m_dlError.clear();
     m_dlRecv   = 0;
     m_dlTotal  = 1;
+    if (m_coverTex) {
+        SDL_DestroyTexture(m_coverTex);
+        m_coverTex = nullptr;
+    }
     loadData();
 }
 
 void DetailScreen::loadData() {
     m_rom     = m_client.getRom(m_romId, m_error);
     m_loading = false;
+    loadCover();
+}
+
+void DetailScreen::loadCover() {
+    if (!m_rom.hasCover()) return;
+    std::string err;
+    auto data = m_client.fetchCoverData(m_rom.coverPathSmall, err);
+    if (!data.empty()) {
+        m_coverTex = m_renderer.loadTextureFromMemory(data);
+    }
 }
 
 std::string DetailScreen::buildDestPath() const {
@@ -153,23 +174,30 @@ void DetailScreen::render() {
     int cx = 30, cy = CONTENT_Y + 20;
     const int LABEL_W = 220;
 
+    // If cover is available, draw it on the left and shift metadata to the right
+    int metaX = cx;
+    if (m_coverTex) {
+        R.drawTextureFit(m_coverTex, cx, cy, COVER_W, COVER_H);
+        metaX = cx + COVER_W + COVER_PAD;
+    }
+
     // ROM name (large)
-    R.drawText(m_rom.name, cx, cy, Color::TextWhite, R.fontLarge());
+    R.drawText(m_rom.name, metaX, cy, Color::TextWhite, R.fontLarge());
     cy += 46;
 
     // Platform
-    R.drawText("Platform:", cx, cy, Color::TextDim, R.fontSmall());
-    R.drawText(m_rom.platformName, cx + LABEL_W, cy, Color::Text, R.fontSmall());
+    R.drawText("Platform:", metaX, cy, Color::TextDim, R.fontSmall());
+    R.drawText(m_rom.platformName, metaX + LABEL_W, cy, Color::Text, R.fontSmall());
     cy += 28;
 
     // File name
-    R.drawText("File:", cx, cy, Color::TextDim, R.fontSmall());
-    R.drawText(m_rom.fileName, cx + LABEL_W, cy, Color::Text, R.fontSmall());
+    R.drawText("File:", metaX, cy, Color::TextDim, R.fontSmall());
+    R.drawText(m_rom.fileName, metaX + LABEL_W, cy, Color::Text, R.fontSmall());
     cy += 28;
 
     // File size
-    R.drawText("Size:", cx, cy, Color::TextDim, R.fontSmall());
-    R.drawText(m_rom.fileSizeStr(), cx + LABEL_W, cy, Color::Text, R.fontSmall());
+    R.drawText("Size:", metaX, cy, Color::TextDim, R.fontSmall());
+    R.drawText(m_rom.fileSizeStr(), metaX + LABEL_W, cy, Color::Text, R.fontSmall());
     cy += 28;
 
     // Regions
@@ -179,9 +207,15 @@ void DetailScreen::render() {
             if (i > 0) regions += ", ";
             regions += m_rom.regions[i];
         }
-        R.drawText("Region:", cx, cy, Color::TextDim, R.fontSmall());
-        R.drawText(regions, cx + LABEL_W, cy, Color::Text, R.fontSmall());
+        R.drawText("Region:", metaX, cy, Color::TextDim, R.fontSmall());
+        R.drawText(regions, metaX + LABEL_W, cy, Color::Text, R.fontSmall());
         cy += 28;
+    }
+
+    // Ensure cy is below the cover image if present
+    if (m_coverTex) {
+        int coverBottom = CONTENT_Y + 20 + COVER_H;
+        if (cy < coverBottom) cy = coverBottom;
     }
 
     cy += 16;
