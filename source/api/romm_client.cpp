@@ -391,8 +391,11 @@ std::vector<Rom> RommClient::getRoms(int platformId, std::string& errorOut) {
 
 std::vector<Rom> RommClient::getRomsByCollection(int collectionId,
                                                    std::string& errorOut) {
-    std::string url = apiUrl("/api/collections/" + std::to_string(collectionId) +
-                             "/roms?limit=" + std::to_string(ROM_PAGE_SIZE));
+    // Issue: #18 - Call /api/roms with collection_id filter to get ROMs in a collection, instead of fetching all ROMs and filtering client-side. This is more efficient for large libraries.
+    std::string url = apiUrl("/api/roms?collection_id=" +
+                             std::to_string(collectionId) +
+                             "&limit=" + std::to_string(ROM_PAGE_SIZE));
+
     std::string body = httpGet(url, errorOut);
     if (body.empty()) return {};
 
