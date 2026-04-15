@@ -88,10 +88,12 @@ Press **X** to save.  The configuration is stored at
 | B | Back |
 | X | Download ROM (on detail screen) / Save settings |
 | Y | Open search / filter (on game list screen) |
+| L / R | Page up / Page down (in list screens) |
+| + | Quit application |
 
 > **Note:** The Switch SDL2 port maps Joy-Con / Pro Controller buttons to
-> keyboard key codes automatically. The mapping is:
-> A → Enter, B → B, X → X, Y → Y, D-Pad → Arrow keys.
+> keyboard key codes automatically.  The left analog stick can also be used
+> for navigation.
 
 ---
 
@@ -109,15 +111,15 @@ For example: `sdmc:/roms/snes/Super Mario World.sfc`
 
 ## API Compatibility
 
-Tested against **RomM v3.x**.  The following endpoints are used:
+Tested against **RomM v4.x** (uses HTTP Basic Authentication).  The following
+endpoints are used:
 
 | Method | Endpoint | Purpose |
 |---|---|---|
-| POST | `/api/auth/login` | Authenticate |
-| GET | `/api/platforms` | List platforms |
-| GET | `/api/roms?platform_id={id}&size=500` | List ROMs for a platform |
+| GET | `/api/platforms` | List platforms (also used to validate credentials) |
+| GET | `/api/roms?platform_ids={id}&limit=500` | List ROMs for a platform |
 | GET | `/api/collections` | List collections |
-| GET | `/api/collections/{id}/roms?size=500` | List ROMs in a collection |
+| GET | `/api/collections/{id}/roms?limit=500` | List ROMs in a collection |
 | GET | `/api/roms/{id}` | ROM details |
 | GET | `/api/roms/{id}/content/{filename}` | Download ROM file |
 
