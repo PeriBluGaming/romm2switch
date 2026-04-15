@@ -3,6 +3,8 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
 #include <string>
+#include <vector>
+#include <cstdint>
 
 // ---------------------------------------------------------------------------
 // Screen dimensions (Switch native resolution in docked mode)
@@ -28,6 +30,9 @@ namespace Color {
     static constexpr SDL_Color ProgressFg  = {35,  134,  54, 255}; // #238636 green
     static constexpr SDL_Color Error       = {248,  81,  73, 255}; // #f85149
     static constexpr SDL_Color Success     = {63,  185, 80,  255}; // #3fb950
+    static constexpr SDL_Color SidebarBg   = {17,  21,  28,  255}; // slightly lighter than Background
+    static constexpr SDL_Color TabActive   = {31,  111, 235, 255}; // same as CardHover
+    static constexpr SDL_Color TabInactive = {30,  35,  44,  255};
 }
 
 // ---------------------------------------------------------------------------
@@ -69,6 +74,20 @@ public:
 
     // Measure text width in pixels
     int textWidth(const std::string& text, TTF_Font* font = nullptr);
+
+    // --- Texture / image support ---
+
+    // Load an SDL_Texture from raw image bytes (JPEG/PNG).
+    // Caller owns the returned texture and must call SDL_DestroyTexture().
+    // Returns nullptr on failure.
+    SDL_Texture* loadTextureFromMemory(const std::vector<uint8_t>& data);
+
+    // Draw a texture stretched to fill the given rectangle.
+    void drawTexture(SDL_Texture* texture, int x, int y, int w, int h);
+
+    // Draw a texture scaled to fit within the given rectangle while
+    // preserving aspect ratio (centered, with letterboxing).
+    void drawTextureFit(SDL_Texture* texture, int x, int y, int w, int h);
 
     TTF_Font* fontLarge()  { return m_fontLarge; }
     TTF_Font* fontMedium() { return m_fontMedium; }

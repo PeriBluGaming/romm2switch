@@ -3,6 +3,7 @@
 #include <curl/curl.h>
 #include <cstring>
 #include <cstdio>
+#include <cstdint>
 #include <sys/stat.h>
 
 // ---------------------------------------------------------------------------
@@ -188,6 +189,10 @@ static Rom parseRom(const std::string& obj) {
     r.platformSlug   = jsonGet(obj, "platform_slug");
     r.platformFsSlug = jsonGet(obj, "platform_fs_slug");
     r.summary        = jsonGet(obj, "summary");
+    // path_cover_small may be null in JSON; jsonGet returns "null" for null values.
+    std::string cover = jsonGet(obj, "path_cover_small");
+    if (cover == "null") cover.clear();
+    r.coverPathSmall = cover;
 
     // Parse regions array
     auto regionItems = jsonGetArray(obj, "regions");
@@ -509,6 +514,68 @@ bool RommClient::downloadRom(const Rom& rom, const std::string& destPath,
     }
 
     return true;
+}
+
+std::vector<uint8_t> RommClient::fetchCoverData(const std::string& coverPath, std::string& errorOut) {
+    if (coverPath.empty()) {
+        errorOut = "Empty cover path";
+        return {};
+    }
+
+    // Use a dedicated curl handle so this is safe to call from a background thread.
+    CURL* curl = curl_easy_init();
+    if (!curl) {
+        errorOut = "Failed to initialize curl handle";
+        return {};
+    }
+
+    // Build the full URL: serverUrl (without /api) + coverPath.
+    // Ensure a "/" separator between the base and the path.
+    std::string base = m_config.serverUrl;
+    while (!base.empty() && base.back() == '/') base.pop_back();
+    std::string path = coverPath;
+    if (!path.empty() && path.front() != '/') path = "/" + path;
+
+    // The cover path may contain spaces (e.g. in the ?ts= timestamp).
+    // Encode spaces as %20 so that curl handles the URL correctly.
+    std::string encoded;
+    encoded.reserve(path.size());
+    for (char c : path) {
+        if (c == ' ')
+            encoded += "%20";
+        else
+            encoded += c;
+    }
+
+    std::string url = base + encoded;
+    std::string response;
+
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeStringCb);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+    curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+    curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+    curl_easy_setopt(curl, CURLOPT_USERPWD, m_userpwd.c_str());
+
+    CURLcode res = curl_easy_perform(curl);
+
+    long httpCode = 0;
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
+    curl_easy_cleanup(curl);
+
+    if (res != CURLE_OK) {
+        errorOut = curl_easy_strerror(res);
+        return {};
+    }
+    if (httpCode >= 400) {
+        errorOut = "HTTP " + std::to_string(httpCode);
+        return {};
+    }
+
+    return std::vector<uint8_t>(response.begin(), response.end());
 }
 
 } // namespace romm

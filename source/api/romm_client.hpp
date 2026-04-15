@@ -4,6 +4,7 @@
 #include "config.hpp"
 
 #include <atomic>
+#include <cstdint>
 #include <functional>
 #include <string>
 #include <vector>
@@ -44,6 +45,14 @@ public:
                      ProgressCallback progressCb,
                      const std::atomic<bool>& cancelFlag,
                      std::string& errorOut);
+
+    // --- Cover images ---
+    // Fetches a cover image as raw bytes (JPEG/PNG) given its relative path
+    // (e.g. "/assets/romm/resources/roms/8/1355/cover/small.png?ts=...").
+    // The server URL is prepended automatically.
+    // Uses a separate curl handle so it is safe to call from a background thread.
+    // Returns an empty vector on failure.
+    std::vector<uint8_t> fetchCoverData(const std::string& coverPath, std::string& errorOut);
 
 private:
     Config m_config;

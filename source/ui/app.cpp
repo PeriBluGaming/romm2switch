@@ -6,11 +6,13 @@
 #include "ui/screens/game_screen.hpp"
 #include "ui/screens/collection_screen.hpp"
 #include "ui/screens/detail_screen.hpp"
+#include "ui/screens/browse_screen.hpp"
 #include "config.hpp"
 
 #include <switch.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
+#include <SDL2/SDL_image.h>
 #include <curl/curl.h>
 #include <array>
 #include <cstring>
@@ -70,21 +72,32 @@ static bool translateJoyButton(const SDL_Event& in, SDL_Event& out) {
 static constexpr Sint16 STICK_DEADZONE = 16000;
 
 static bool translateJoyAxis(const SDL_Event& in, SDL_Event& out,
-                             bool& stickUp, bool& stickDown) {
+                             bool& stickUp, bool& stickDown,
+                             bool& stickLeft, bool& stickRight) {
     if (in.type != SDL_JOYAXISMOTION) return false;
-    // Left stick Y-axis is axis 1 on the Switch SDL2 port
-    if (in.jaxis.axis != 1) return false;
 
     Sint16 val = in.jaxis.value;
-    bool wantUp   = (val < -STICK_DEADZONE);
-    bool wantDown = (val >  STICK_DEADZONE);
-
     SDL_Keycode key = SDLK_UNKNOWN;
-    if (wantUp && !stickUp)        key = SDLK_UP;
-    else if (wantDown && !stickDown) key = SDLK_DOWN;
 
-    stickUp   = wantUp;
-    stickDown = wantDown;
+    if (in.jaxis.axis == 1) { // Y-axis
+        bool wantUp   = (val < -STICK_DEADZONE);
+        bool wantDown = (val >  STICK_DEADZONE);
+
+        if (wantUp && !stickUp)        key = SDLK_UP;
+        else if (wantDown && !stickDown) key = SDLK_DOWN;
+
+        stickUp   = wantUp;
+        stickDown = wantDown;
+    } else if (in.jaxis.axis == 0) { // X-axis
+        bool wantLeft  = (val < -STICK_DEADZONE);
+        bool wantRight = (val >  STICK_DEADZONE);
+
+        if (wantLeft && !stickLeft)       key = SDLK_LEFT;
+        else if (wantRight && !stickRight) key = SDLK_RIGHT;
+
+        stickLeft  = wantLeft;
+        stickRight = wantRight;
+    }
 
     if (key == SDLK_UNKNOWN) return false;
 
@@ -175,13 +188,12 @@ private:
     bool m_loggedIn;
     std::string m_loginError;
     int  m_selected;
-    std::array<const char*, 3> m_items = {"Platforms", "Collections", "Settings"};
+    std::array<const char*, 2> m_items = {"Browse", "Settings"};
 
     void select() {
         switch (m_selected) {
-        case 0: navigateTo("platforms",   0); break;
-        case 1: navigateTo("collections", 0); break;
-        case 2: navigateTo("settings",    0); break;
+        case 0: navigateTo("browse",   0); break;
+        case 1: navigateTo("settings", 0); break;
         }
     }
 };
@@ -203,6 +215,7 @@ bool App::init() {
 
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK) < 0) return false;
     if (TTF_Init() < 0) { SDL_Quit(); return false; }
+    IMG_Init(IMG_INIT_JPG | IMG_INIT_PNG);
 
     m_window = SDL_CreateWindow("RomM2Switch",
                                 SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
@@ -256,6 +269,7 @@ void App::cleanup() {
     if (m_window)  SDL_DestroyWindow(m_window);
 
     TTF_Quit();
+    IMG_Quit();
     SDL_Quit();
     curl_global_cleanup();
     plExit();
@@ -292,6 +306,11 @@ std::unique_ptr<Screen> App::makeScreen(const std::string& name, int id) {
             });
     }
 
+    if (name == "browse") {
+        if (!m_client) return makeScreen("main", 0);
+        return std::make_unique<BrowseScreen>(*m_renderer, nav, *m_client);
+    }
+
     if (name == "platforms") {
         if (!m_client) return makeScreen("main", 0);
         return std::make_unique<PlatformScreen>(*m_renderer, nav, *m_client);
@@ -321,8 +340,9 @@ std::unique_ptr<Screen> App::makeScreen(const std::string& name, int id) {
     }
 
     if (name == "back") {
-        // Navigate back to main; in a more complex app this could be a stack
-        return makeScreen("main", 0);
+        // Navigate back to the browse screen; in a more complex app
+        // this could be a proper navigation stack.
+        return makeScreen("browse", 0);
     }
 
     return nullptr;
@@ -336,6 +356,7 @@ void App::run() {
 
     bool running = true;
     bool stickUp = false, stickDown = false;
+    bool stickLeft = false, stickRight = false;
     while (running && appletMainLoop()) {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
@@ -343,7 +364,8 @@ void App::run() {
             // so that every Screen's update() works without modification.
             SDL_Event translated;
             if (translateJoyButton(event, translated) ||
-                translateJoyAxis(event, translated, stickUp, stickDown)) {
+                translateJoyAxis(event, translated, stickUp, stickDown,
+                                 stickLeft, stickRight)) {
                 event = translated;
             }
 

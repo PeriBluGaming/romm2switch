@@ -49,7 +49,7 @@ CXXFLAGS := $(CFLAGS) -fno-rtti -fexceptions -std=c++17
 ASFLAGS  := -g $(ARCH)
 LDFLAGS   = -specs=$(DEVKITPRO)/libnx/switch.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
 
-LIBS := -lSDL2_ttf -lSDL2 -lEGL -lglapi -ldrm_nouveau \
+LIBS := -lSDL2_ttf -lSDL2_image -lSDL2 -lEGL -lglapi -ldrm_nouveau \
         -lcurl -lmbedtls -lmbedx509 -lmbedcrypto \
         -lfreetype -lharfbuzz -lbz2 -lpng -ljpeg -lwebp -lz -lnx
 
