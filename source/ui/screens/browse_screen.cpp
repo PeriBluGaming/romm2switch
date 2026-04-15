@@ -603,7 +603,7 @@ void BrowseScreen::renderGridView() {
                 R.fillRect(cellX + 2, cellY + 2, GRID_CELL_W - 4, GRID_IMG_H - 4,
                            Color::Background);
                 // Show a small icon/text placeholder
-                R.drawTextCentered("\xf0\x9f\x8e\xae", cellX, cellY + GRID_IMG_H / 2 - 16,
+                R.drawTextCentered("[No Cover]", cellX, cellY + GRID_IMG_H / 2 - 16,
                                    GRID_CELL_W, Color::TextDim, R.fontLarge());
             }
 
