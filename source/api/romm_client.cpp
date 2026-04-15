@@ -451,11 +451,21 @@ bool RommClient::downloadRom(const Rom& rom, const std::string& destPath,
         return false;
     }
 
-    std::string url = apiUrl("/api/roms/" + std::to_string(rom.id) +
-                             "/content/" + rom.fileName);
-
     DownloadState state{fp, progressCb, &cancelFlag};
     CURL* curl = static_cast<CURL*>(m_curl);
+
+    // URL-encode the filename so that spaces, parentheses, and other special
+    // characters are properly percent-encoded (e.g. " " -> "%20").
+    char* escapedName = curl_easy_escape(curl, rom.fileName.c_str(),
+                                         static_cast<int>(rom.fileName.size()));
+    if (!escapedName) {
+        fclose(fp);
+        errorOut = "Failed to URL-encode filename: " + rom.fileName;
+        return false;
+    }
+    std::string url = apiUrl("/api/roms/" + std::to_string(rom.id) +
+                              "/content/" + std::string(escapedName));
+    curl_free(escapedName);
 
     curl_easy_reset(curl);
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
