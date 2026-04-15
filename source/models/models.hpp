@@ -31,7 +31,7 @@ struct Rom {
     std::string platformFsSlug;
     std::string summary;
     std::vector<std::string> regions;
-    std::string coverPathSmall; // parsed from "path_cover_s" — non-empty if cover exists
+    std::string coverPathSmall; // parsed from "path_cover_small" — non-empty if cover exists
 
     bool hasCover() const { return !coverPathSmall.empty(); }
 
