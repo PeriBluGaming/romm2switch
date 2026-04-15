@@ -103,9 +103,11 @@ static constexpr int STATUS_H  = 44;
 class MainMenuScreen : public Screen {
 public:
     MainMenuScreen(Renderer& renderer, NavigateFn navigate,
-                   bool hasConfig)
+                   bool hasConfig, bool loggedIn, const std::string& loginError)
         : Screen(renderer, std::move(navigate))
         , m_hasConfig(hasConfig)
+        , m_loggedIn(loggedIn)
+        , m_loginError(loginError)
         , m_selected(0)
     {}
 
@@ -141,6 +143,14 @@ public:
             R.drawTextCentered("Please open Settings to enter your RomM server details.",
                                0, SCREEN_H / 2, SCREEN_W,
                                Color::TextDim, R.fontSmall());
+        } else if (m_loggedIn) {
+            R.drawTextCentered("\xe2\x9c\x94 Connected to RomM",
+                               0, HEADER_H + 20, SCREEN_W,
+                               Color::Success, R.fontSmall());
+        } else if (!m_loginError.empty()) {
+            R.drawTextCentered("\xe2\x9c\x98 Login failed: " + m_loginError,
+                               0, HEADER_H + 20, SCREEN_W,
+                               Color::Error, R.fontSmall());
         }
 
         int startY = HEADER_H + 80;
@@ -162,6 +172,8 @@ public:
 
 private:
     bool m_hasConfig;
+    bool m_loggedIn;
+    std::string m_loginError;
     int  m_selected;
     std::array<const char*, 3> m_items = {"Platforms", "Collections", "Settings"};
 
@@ -224,9 +236,8 @@ bool App::init() {
 
     if (m_config.isConfigured()) {
         m_client = std::make_unique<romm::RommClient>(m_config);
-        // Attempt login; ignore failure here (user can fix in settings)
-        std::string err;
-        m_client->login(err);
+        // Attempt login and track result for the UI
+        m_loggedIn = m_client->login(m_loginError);
     }
 
     return true;
@@ -264,7 +275,8 @@ std::unique_ptr<Screen> App::makeScreen(const std::string& name, int id) {
 
     if (name == "main") {
         return std::make_unique<MainMenuScreen>(
-            *m_renderer, nav, m_config.isConfigured());
+            *m_renderer, nav, m_config.isConfigured(),
+            m_loggedIn, m_loginError);
     }
 
     if (name == "settings") {
@@ -273,10 +285,10 @@ std::unique_ptr<Screen> App::makeScreen(const std::string& name, int id) {
             [this](const romm::Config& cfg) {
                 m_config = cfg;
                 romm::saveConfig(m_config);
-                // Re-create client with new config and login
+                // Re-create client with new config and test login
                 m_client = std::make_unique<romm::RommClient>(m_config);
-                std::string err;
-                m_client->login(err);
+                m_loginError.clear();
+                m_loggedIn = m_client->login(m_loginError);
             });
     }
 

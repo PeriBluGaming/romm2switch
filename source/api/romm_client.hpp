@@ -24,7 +24,7 @@ public:
     ~RommClient();
 
     // --- Authentication ---
-    // Authenticates with the server and stores the session cookie.
+    // Validates credentials with the server using HTTP Basic Auth.
     // Returns true on success, false otherwise.
     bool login(std::string& errorOut);
 
@@ -48,7 +48,10 @@ public:
 private:
     Config m_config;
     void*  m_curl;        // CURL* handle (opaque to keep curl out of header)
-    std::string m_cookieJarPath;
+    std::string m_userpwd; // "username:password" for HTTP Basic Auth
+
+    // Apply HTTP Basic Auth credentials to the current curl handle.
+    void applyBasicAuth();
 
     // Perform a GET request; returns HTTP body or empty string on error.
     std::string httpGet(const std::string& url, std::string& errorOut);
