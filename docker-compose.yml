@@ -6,6 +6,5 @@ services:
       - DEVKITARM=/opt/devkitpro/devkitA64
     volumes:
       - .:/app
-      - /app/build
     working_dir: /app
     command: bash -c "make clean && make"
