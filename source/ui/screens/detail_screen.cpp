@@ -219,7 +219,7 @@ void DetailScreen::render() {
     }
 
     cy += 16;
-    R.fillRect(30, cy, SCREEN_W - 30 * 2, 1, Color::Separator);
+    R.fillRect(cx, cy, SCREEN_W - cx * 2, 1, Color::Separator);
     cy += 16;
 
     // Summary (word-wrapped)
