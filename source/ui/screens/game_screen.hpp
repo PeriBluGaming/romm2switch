@@ -39,7 +39,7 @@ private:
     bool        m_filterMode = false;
     std::vector<romm::Rom> m_filtered;
 
-    static constexpr int ITEM_H       = 55;
+    static constexpr int ITEM_H       = 70;
     static constexpr int HEADER_H     = 60;
     static constexpr int STATUS_H     = 44;
     static constexpr int CONTENT_Y    = HEADER_H;

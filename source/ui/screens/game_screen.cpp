@@ -185,12 +185,12 @@ void GameScreen::render() {
                    selected ? Color::CardHover : Color::Background);
 
         // ROM name
-        R.drawText(rom.name, 30, y + 8,
+        R.drawText(rom.name, 30, y + 14,
                    selected ? Color::TextWhite : Color::Text);
 
         // Platform name (dim)
         if (!rom.platformName.empty()) {
-            R.drawText(rom.platformName, 30, y + 30,
+            R.drawText(rom.platformName, 30, y + 40,
                        Color::TextDim, R.fontSmall());
         }
 

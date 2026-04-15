@@ -9,15 +9,17 @@
 #include <atomic>
 #include <thread>
 #include <string>
+#include <vector>
 
 // ---------------------------------------------------------------------------
-// DetailScreen — ROM details + download button
+// DetailScreen — ROM details + cover image + download button
 // ---------------------------------------------------------------------------
 class DetailScreen : public Screen {
 public:
     DetailScreen(Renderer& renderer, NavigateFn navigate,
                  romm::RommClient& client, const romm::Config& config,
                  int romId);
+    ~DetailScreen() override;
 
     void onEnter() override;
     bool update(const SDL_Event& event) override;
@@ -31,6 +33,9 @@ private:
 
     bool        m_loading = true;
     std::string m_error;
+
+    // Cover image
+    SDL_Texture* m_coverTex = nullptr;
 
     // Download state
     enum class DownloadState { Idle, Downloading, Done, Failed };
@@ -46,7 +51,13 @@ private:
     static constexpr int STATUS_H  = 44;
     static constexpr int CONTENT_Y = HEADER_H;
 
+    // Cover image dimensions
+    static constexpr int COVER_W   = 200;
+    static constexpr int COVER_H   = 280;
+    static constexpr int COVER_PAD = 20;
+
     void loadData();
+    void loadCover();
     void startDownload();
     std::string buildDestPath() const;
 
