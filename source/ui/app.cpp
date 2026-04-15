@@ -258,6 +258,7 @@ bool App::init() {
 
 void App::cleanup() {
     m_current.reset();
+    m_savedBrowse.reset();
     m_client.reset();
     m_renderer.reset();
 
@@ -277,6 +278,24 @@ void App::cleanup() {
 }
 
 void App::navigateTo(const std::string& name, int id) {
+    // When navigating to "detail" from the browse screen, preserve it
+    // so the user returns to the same platform/collection selection.
+    if (name == "detail" && m_current && !m_savedBrowse) {
+        m_savedBrowse = std::move(m_current);
+    }
+
+    // When going back, restore the saved browse screen instead of
+    // creating a brand-new one (which would reset the selection).
+    if (name == "back" && m_savedBrowse) {
+        m_current = std::move(m_savedBrowse);
+        return;
+    }
+
+    // Discard stale saved browse for any other navigation target.
+    if (name != "detail") {
+        m_savedBrowse.reset();
+    }
+
     auto next = makeScreen(name, id);
     if (next) {
         m_current = std::move(next);

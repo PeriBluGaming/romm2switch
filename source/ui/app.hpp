@@ -28,6 +28,7 @@ private:
 
     std::unique_ptr<Renderer>    m_renderer;
     std::unique_ptr<Screen>      m_current;
+    std::unique_ptr<Screen>      m_savedBrowse;  // preserved browse screen state
 
     romm::Config                 m_config;
     std::unique_ptr<romm::RommClient> m_client;
