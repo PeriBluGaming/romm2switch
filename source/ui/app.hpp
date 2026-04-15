@@ -31,6 +31,8 @@ private:
 
     romm::Config                 m_config;
     std::unique_ptr<romm::RommClient> m_client;
+    bool                         m_loggedIn = false;
+    std::string                  m_loginError;
 
     // Called by screens to switch to a new screen by name + optional id
     void navigateTo(const std::string& name, int id);

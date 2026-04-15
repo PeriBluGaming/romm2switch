@@ -9,6 +9,8 @@ struct Platform {
     int id = 0;
     std::string name;
     std::string slug;
+    std::string fsSlug;
+    std::string displayName;
     int romCount = 0;
 };
 
@@ -21,11 +23,12 @@ struct Collection {
 struct Rom {
     int id = 0;
     std::string name;
-    std::string fileName;
-    long long fileSizeBytes = 0;
+    std::string fileName;       // parsed from "fs_name" in API 4.7.0
+    long long fileSizeBytes = 0; // parsed from "fs_size_bytes" in API 4.7.0
     int platformId = 0;
-    std::string platformName;
+    std::string platformName;   // parsed from "platform_display_name" in API 4.7.0
     std::string platformSlug;
+    std::string platformFsSlug;
     std::string summary;
     std::vector<std::string> regions;
 

@@ -160,10 +160,12 @@ namespace romm {
 
 static Platform parsePlatform(const std::string& obj) {
     Platform p;
-    p.id       = jsonInt(jsonGet(obj, "id"));
-    p.name     = jsonGet(obj, "name");
-    p.slug     = jsonGet(obj, "slug");
-    p.romCount = jsonInt(jsonGet(obj, "rom_count"));
+    p.id          = jsonInt(jsonGet(obj, "id"));
+    p.name        = jsonGet(obj, "name");
+    p.slug        = jsonGet(obj, "slug");
+    p.fsSlug      = jsonGet(obj, "fs_slug");
+    p.displayName = jsonGet(obj, "display_name");
+    p.romCount    = jsonInt(jsonGet(obj, "rom_count"));
     return p;
 }
 
@@ -179,11 +181,12 @@ static Rom parseRom(const std::string& obj) {
     Rom r;
     r.id             = jsonInt(jsonGet(obj, "id"));
     r.name           = jsonGet(obj, "name");
-    r.fileName       = jsonGet(obj, "file_name");
-    r.fileSizeBytes  = jsonLL(jsonGet(obj, "file_size_bytes"));
+    r.fileName       = jsonGet(obj, "fs_name");
+    r.fileSizeBytes  = jsonLL(jsonGet(obj, "fs_size_bytes"));
     r.platformId     = jsonInt(jsonGet(obj, "platform_id"));
-    r.platformName   = jsonGet(obj, "platform_name");
+    r.platformName   = jsonGet(obj, "platform_display_name");
     r.platformSlug   = jsonGet(obj, "platform_slug");
+    r.platformFsSlug = jsonGet(obj, "platform_fs_slug");
     r.summary        = jsonGet(obj, "summary");
 
     // Parse regions array
@@ -208,7 +211,7 @@ static Rom parseRom(const std::string& obj) {
 RommClient::RommClient(const Config& config)
     : m_config(config)
     , m_curl(nullptr)
-    , m_cookieJarPath("sdmc:/config/romm2switch/cookies.txt")
+    , m_userpwd(config.username + ":" + config.password)
 {
     // curl_global_init() must be called once per process by the application
     // before constructing any RommClient instance.
@@ -218,6 +221,12 @@ RommClient::RommClient(const Config& config)
 RommClient::~RommClient() {
     if (m_curl) curl_easy_cleanup(static_cast<CURL*>(m_curl));
     // curl_global_cleanup() is called by the application, not here.
+}
+
+void RommClient::applyBasicAuth() {
+    CURL* curl = static_cast<CURL*>(m_curl);
+    curl_easy_setopt(curl, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+    curl_easy_setopt(curl, CURLOPT_USERPWD, m_userpwd.c_str());
 }
 
 std::string RommClient::apiUrl(const std::string& path) const {
@@ -240,9 +249,8 @@ std::string RommClient::httpGet(const std::string& url, std::string& errorOut) {
     // Accept self-signed certificates (typical for home servers)
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
-    // Cookie support
-    curl_easy_setopt(curl, CURLOPT_COOKIEFILE, m_cookieJarPath.c_str());
-    curl_easy_setopt(curl, CURLOPT_COOKIEJAR,  m_cookieJarPath.c_str());
+    // HTTP Basic Authentication
+    applyBasicAuth();
 
     CURLcode res = curl_easy_perform(curl);
     if (res != CURLE_OK) {
@@ -279,8 +287,8 @@ std::string RommClient::httpPost(const std::string& url, const std::string& body
     curl_easy_setopt(curl, CURLOPT_TIMEOUT, 30L);
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
-    curl_easy_setopt(curl, CURLOPT_COOKIEFILE, m_cookieJarPath.c_str());
-    curl_easy_setopt(curl, CURLOPT_COOKIEJAR,  m_cookieJarPath.c_str());
+    // HTTP Basic Authentication
+    applyBasicAuth();
 
     CURLcode res = curl_easy_perform(curl);
     curl_slist_free_all(headers);
@@ -301,36 +309,25 @@ std::string RommClient::httpPost(const std::string& url, const std::string& body
 }
 
 bool RommClient::login(std::string& errorOut) {
-    // Ensure cookie directory exists
-    mkdir("sdmc:/config/romm2switch", 0755);
-
-    // RomM login: POST /api/auth/login  (form-encoded username/password)
+    // With HTTP Basic Auth, credentials are sent on every request.
+    // Validate them by making a lightweight GET to /api/platforms.
     CURL* curl = static_cast<CURL*>(m_curl);
     std::string response;
 
-    std::string url  = apiUrl("/api/auth/login");
-    std::string body = "username=" + m_config.username +
-                       "&password=" + m_config.password;
-
-    struct curl_slist* headers = nullptr;
-    headers = curl_slist_append(headers,
-                                "Content-Type: application/x-www-form-urlencoded");
+    std::string url = apiUrl("/api/platforms");
 
     curl_easy_reset(curl);
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, body.c_str());
-    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeStringCb);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
     curl_easy_setopt(curl, CURLOPT_TIMEOUT, 15L);
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
-    curl_easy_setopt(curl, CURLOPT_COOKIEFILE, m_cookieJarPath.c_str());
-    curl_easy_setopt(curl, CURLOPT_COOKIEJAR,  m_cookieJarPath.c_str());
+    // HTTP Basic Authentication
+    applyBasicAuth();
 
     CURLcode res = curl_easy_perform(curl);
-    curl_slist_free_all(headers);
 
     if (res != CURLE_OK) {
         errorOut = curl_easy_strerror(res);
@@ -339,6 +336,10 @@ bool RommClient::login(std::string& errorOut) {
 
     long httpCode = 0;
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
+    if (httpCode == 401 || httpCode == 403) {
+        errorOut = "Authentication failed (HTTP " + std::to_string(httpCode) + ")";
+        return false;
+    }
     if (httpCode >= 400) {
         errorOut = "Login failed (HTTP " + std::to_string(httpCode) + ")";
         return false;
@@ -361,7 +362,7 @@ std::vector<Platform> RommClient::getPlatforms(std::string& errorOut) {
 std::vector<Rom> RommClient::getRoms(int platformId, std::string& errorOut) {
     std::string url = apiUrl("/api/roms?platform_id=" +
                              std::to_string(platformId) +
-                             "&size=" + std::to_string(ROM_PAGE_SIZE));
+                             "&limit=" + std::to_string(ROM_PAGE_SIZE));
     std::string body = httpGet(url, errorOut);
     if (body.empty()) return {};
 
@@ -385,7 +386,7 @@ std::vector<Rom> RommClient::getRoms(int platformId, std::string& errorOut) {
 std::vector<Rom> RommClient::getRomsByCollection(int collectionId,
                                                    std::string& errorOut) {
     std::string url = apiUrl("/api/collections/" + std::to_string(collectionId) +
-                             "/roms?size=" + std::to_string(ROM_PAGE_SIZE));
+                             "/roms?limit=" + std::to_string(ROM_PAGE_SIZE));
     std::string body = httpGet(url, errorOut);
     if (body.empty()) return {};
 
@@ -470,8 +471,8 @@ bool RommClient::downloadRom(const Rom& rom, const std::string& destPath,
     // configured themselves, so MITM risk is low in this context.
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
     curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
-    curl_easy_setopt(curl, CURLOPT_COOKIEFILE, m_cookieJarPath.c_str());
-    curl_easy_setopt(curl, CURLOPT_COOKIEJAR,  m_cookieJarPath.c_str());
+    // HTTP Basic Authentication
+    applyBasicAuth();
 
     CURLcode res = curl_easy_perform(curl);
     fclose(fp);

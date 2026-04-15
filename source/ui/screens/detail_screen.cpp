@@ -31,7 +31,9 @@ void DetailScreen::loadData() {
 std::string DetailScreen::buildDestPath() const {
     std::string path = m_config.downloadPath;
     if (!path.empty() && path.back() != '/') path += '/';
-    if (!m_rom.platformSlug.empty())
+    if (!m_rom.platformFsSlug.empty())
+        path += m_rom.platformFsSlug + '/';
+    else if (!m_rom.platformSlug.empty())
         path += m_rom.platformSlug + '/';
     else if (!m_rom.platformName.empty())
         path += m_rom.platformName + '/';
