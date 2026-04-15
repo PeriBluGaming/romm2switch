@@ -280,7 +280,7 @@ void App::cleanup() {
 void App::navigateTo(const std::string& name, int id) {
     // When navigating to "detail" from the browse screen, preserve it
     // so the user returns to the same platform/collection selection.
-    if (name == "detail" && m_current) {
+    if (name == "detail" && m_current && !m_savedBrowse) {
         m_savedBrowse = std::move(m_current);
     }
 
