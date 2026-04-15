@@ -1,7 +1,7 @@
 # RomM2Switch
 
 <div align="center">
-![logo](icon.jpg)
+<img src="icon.jpg" alt="Project Image">
 </div>
 
 A Nintendo Switch homebrew application (NRO) that connects to your self-hosted
