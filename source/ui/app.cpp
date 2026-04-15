@@ -157,11 +157,11 @@ public:
                                0, SCREEN_H / 2, SCREEN_W,
                                Color::TextDim, R.fontSmall());
         } else if (m_loggedIn) {
-            R.drawTextCentered("\xe2\x9c\x94 Connected to RomM",
+            R.drawTextCentered("Connected to RomM",
                                0, HEADER_H + 20, SCREEN_W,
                                Color::Success, R.fontSmall());
         } else if (!m_loginError.empty()) {
-            R.drawTextCentered("\xe2\x9c\x98 Login failed: " + m_loginError,
+            R.drawTextCentered("Login failed: " + m_loginError,
                                0, HEADER_H + 20, SCREEN_W,
                                Color::Error, R.fontSmall());
         }
@@ -180,7 +180,7 @@ public:
                                R.fontLarge());
         }
 
-        R.drawStatusBar("\xe2\x86\x91\xe2\x86\x93 Navigate  \xe2\x8f\xb5 Select");
+        R.drawStatusBar("Up/Down Navigate  A Select");
     }
 
 private:

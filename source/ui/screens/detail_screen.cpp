@@ -246,7 +246,7 @@ void DetailScreen::render() {
         int bx = (SCREEN_W - bw) / 2;
         int by = dlY + 8;
         R.fillRect(bx, by, bw, bh, Color::CardHover);
-        R.drawTextCentered("\xe2\xac\x87  Download", bx, by + (bh - 26) / 2, bw,
+        R.drawTextCentered("Download", bx, by + (bh - 26) / 2, bw,
                            Color::TextWhite, R.fontMedium());
         break;
     }
@@ -275,7 +275,7 @@ void DetailScreen::render() {
     }
     case DownloadState::Done:
     {
-        R.drawTextCentered("\xe2\x9c\x94 Download complete!", 0, dlY + 20,
+        R.drawTextCentered("Download complete!", 0, dlY + 20,
                            SCREEN_W, Color::Success, R.fontMedium());
         // Show destination
         R.drawTextCentered(m_dlDestPath, 0, dlY + 50, SCREEN_W,
@@ -284,7 +284,7 @@ void DetailScreen::render() {
     }
     case DownloadState::Failed:
     {
-        R.drawTextCentered("\xe2\x9c\x98 Download failed: " + m_dlError,
+        R.drawTextCentered("Download failed: " + m_dlError,
                            0, dlY + 10, SCREEN_W, Color::Error, R.fontSmall());
         int bw = 280, bh = 38;
         int bx = (SCREEN_W - bw) / 2;

@@ -377,12 +377,12 @@ void BrowseScreen::render() {
     // Status bar
     std::string hint;
     if (m_focusPane == BrowsePane::Sidebar) {
-        hint = "\xe2\x86\x91\xe2\x86\x93 Navigate  L/R Tab  \xe2\x8f\xb5/\xe2\x86\x92 Open  Y View  B Back";
+        hint = "Up/Down Navigate  L/R Tab  A/Right Open  Y View  B Back";
     } else {
         if (m_viewMode == ViewMode::List)
-            hint = "\xe2\x86\x91\xe2\x86\x93 Navigate  \xe2\x8f\xb5 Details  \xe2\x86\x90/B Sidebar  Y Grid";
+            hint = "Up/Down Navigate  A Details  Left/B Sidebar  Y Grid";
         else
-            hint = "\xe2\x86\x91\xe2\x86\x93\xe2\x86\x90\xe2\x86\x92 Navigate  \xe2\x8f\xb5 Details  B Sidebar  Y List";
+            hint = "DPad Navigate  A Details  B Sidebar  Y List";
     }
     R.drawStatusBar(hint);
 }
@@ -542,7 +542,7 @@ void BrowseScreen::renderListView() {
         // Sub-info
         std::string sub = rom.platformName;
         if (rom.fileSizeBytes > 0) {
-            if (!sub.empty()) sub += "  \xe2\x80\xa2  ";
+            if (!sub.empty()) sub += "  |  ";
             sub += rom.fileSizeStr();
         }
         if (!sub.empty()) {

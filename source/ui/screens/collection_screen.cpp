@@ -120,5 +120,5 @@ void CollectionScreen::render() {
         R.fillRect(SCREEN_W - 6, barY, 4, barH, Color::CardHover);
     }
 
-    R.drawStatusBar("\xe2\x86\x91\xe2\x86\x93 Navigate  \xe2\x8f\xb5 Open Collection  B Back");
+    R.drawStatusBar("Up/Down Navigate  A Open Collection  B Back");
 }

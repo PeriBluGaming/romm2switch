@@ -90,7 +90,7 @@ void LoginScreen::handleTextInput(const SDL_Event& event) {
 void LoginScreen::render() {
     auto& R = m_renderer;
     R.fillRect(0, 0, SCREEN_W, SCREEN_H, Color::Background);
-    R.drawHeader("RomM2Switch \xe2\x80\x94 Settings");
+    R.drawHeader("RomM2Switch - Settings");
 
     int cy = HEADER_H + START_Y;
     for (int i = 0; i < static_cast<int>(Field::COUNT); ++i) {
@@ -131,5 +131,5 @@ void LoginScreen::render() {
         R.drawText(m_statusMsg, FIELD_X, cy + 10, col);
     }
 
-    R.drawStatusBar("\xe2\x86\x91\xe2\x86\x93 Select  \xe2\x8f\xb5 Edit  Backspace Delete  \xe2\x8f\xb5 Confirm  X Save  B Cancel");
+    R.drawStatusBar("Up/Down Select  A Edit  Backspace Delete  A Confirm  X Save  B Cancel");
 }

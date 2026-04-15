@@ -214,7 +214,7 @@ void GameScreen::render() {
         R.fillRect(SCREEN_W - 6, barY, 4, barH, Color::CardHover);
     }
 
-    std::string hint = "\xe2\x86\x91\xe2\x86\x93 Navigate  \xe2\x8f\xb5 Details  Y Search";
+    std::string hint = "Up/Down Navigate  A Details  Y Search";
     if (m_filterMode) hint = "Type to search  Enter/Esc Exit search";
     hint += "  B Back";
     R.drawStatusBar(hint);
