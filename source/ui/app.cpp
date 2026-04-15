@@ -180,7 +180,7 @@ public:
             R.fillRect(bx, y, bw, bh, sel ? Color::CardHover : Color::Card);
             R.drawRect(bx, y, bw, bh, sel ? Color::TextWhite : Color::Separator);
             R.drawTextCentered(m_items[static_cast<size_t>(i)], bx, y + (bh - 26) / 2,
-                               bw, sel ? Color::TextWhite : Color::TextWhite,
+                               bw, Color::TextWhite,
                                R.fontLarge());
         }
 

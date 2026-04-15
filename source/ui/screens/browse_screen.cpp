@@ -570,7 +570,7 @@ void BrowseScreen::renderListView() {
         float offset = static_cast<float>(m_contentScroll) / gameCount();
         int   barH   = std::max(10, static_cast<int>(CONTENT_H * ratio));
         int   barY   = CONTENT_Y + static_cast<int>(CONTENT_H * offset);
-            R.fillRect(SCREEN_W - 6, barY, 4, barH, Color::CardHover);
+        R.fillRect(SCREEN_W - 6, barY, 4, barH, Color::CardHover);
     }
 }
 
