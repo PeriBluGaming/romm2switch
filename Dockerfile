@@ -12,9 +12,11 @@ RUN dkp-pacman -Syyu --noconfirm && \
     switch-mbedtls \
     switch-libjpeg-turbo \
     switch-libwebp \
-    switch-libpng
+    switch-libpng \
+    switch-harfbuzz \
+    switch-mesa
 
 ENV DEVKITPRO=/opt/devkitpro
-ENV DEVKITARM=/opt/devkitpro/devkitA64
+ENV DEVKITA64=/opt/devkitpro/devkitA64
 
 WORKDIR /app
