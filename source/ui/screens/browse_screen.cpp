@@ -5,6 +5,19 @@
 #include <chrono>
 
 // ---------------------------------------------------------------------------
+// Local helper: truncate a string so it fits within maxWidth pixels
+// ---------------------------------------------------------------------------
+static std::string truncateText(const std::string& text, int maxWidth,
+                                TTF_Font* font, Renderer& renderer) {
+    std::string display = text;
+    while (renderer.textWidth(display, font) > maxWidth && display.size() > 3) {
+        display.pop_back();
+        if (display.size() > 2) display.replace(display.size() - 2, 2, "..");
+    }
+    return display;
+}
+
+// ---------------------------------------------------------------------------
 // Construction / destruction
 // ---------------------------------------------------------------------------
 
@@ -438,11 +451,7 @@ void BrowseScreen::renderSidebar() {
 
         // Truncate long names
         int maxNameW = SIDEBAR_W - 80;
-        std::string display = name;
-        while (R.textWidth(display, R.fontSmall()) > maxNameW && display.size() > 3) {
-            display.pop_back();
-            if (display.size() > 2) display.replace(display.size() - 2, 2, "..");
-        }
+        std::string display = truncateText(name, maxNameW, R.fontSmall(), R);
 
         R.drawText(display, 12, y + (SIDEBAR_ITEM_H - 20) / 2,
                    selected ? Color::TextWhite : Color::Text, R.fontSmall());
@@ -601,24 +610,16 @@ void BrowseScreen::renderGridView() {
             // Game name below the image
             int nameY = cellY + GRID_IMG_H + 4;
             int nameH = GRID_CELL_H - GRID_IMG_H - 4;
+            int maxW = GRID_CELL_W - 8;
 
             // Truncate name to fit
-            std::string display = rom.name;
-            int maxW = GRID_CELL_W - 8;
-            while (R.textWidth(display, R.fontSmall()) > maxW && display.size() > 3) {
-                display.pop_back();
-                if (display.size() > 2) display.replace(display.size() - 2, 2, "..");
-            }
+            std::string display = truncateText(rom.name, maxW, R.fontSmall(), R);
             R.drawTextCentered(display, cellX, nameY, GRID_CELL_W,
                                selected ? Color::TextWhite : Color::Text, R.fontSmall());
 
             // Second line: platform name (dim)
             if (!rom.platformName.empty() && nameH > 36) {
-                std::string plat = rom.platformName;
-                while (R.textWidth(plat, R.fontSmall()) > maxW && plat.size() > 3) {
-                    plat.pop_back();
-                    if (plat.size() > 2) plat.replace(plat.size() - 2, 2, "..");
-                }
+                std::string plat = truncateText(rom.platformName, maxW, R.fontSmall(), R);
                 R.drawTextCentered(plat, cellX, nameY + 20, GRID_CELL_W,
                                    Color::TextDim, R.fontSmall());
             }
@@ -725,26 +726,26 @@ void BrowseScreen::coverWorker() {
 }
 
 void BrowseScreen::clearCovers() {
+    // Stop the worker thread before touching shared state
     stopCoverThread();
 
-    // Destroy all cached textures
+    // Destroy all cached textures (main thread only, safe without lock)
     for (auto& [id, tex] : m_coverCache) {
         if (tex) SDL_DestroyTexture(tex);
     }
     m_coverCache.clear();
     m_coverRequested.clear();
 
+    // Clear queues (thread is stopped, but lock for consistency)
     {
         std::lock_guard<std::mutex> lock(m_coverMutex);
         m_coverQueue.clear();
         m_coverResults.clear();
     }
 
-    // Restart thread if needed
+    // Restart the worker thread
     m_coverStop = false;
-    if (!m_coverThread.joinable()) {
-        m_coverThread = std::thread(&BrowseScreen::coverWorker, this);
-    }
+    m_coverThread = std::thread(&BrowseScreen::coverWorker, this);
 }
 
 void BrowseScreen::stopCoverThread() {
