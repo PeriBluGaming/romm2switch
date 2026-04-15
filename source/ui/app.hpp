@@ -21,6 +21,7 @@ private:
     // SDL / window
     SDL_Window*   m_window   = nullptr;
     SDL_Renderer* m_sdlRend  = nullptr;
+    SDL_Joystick* m_joystick = nullptr;
     TTF_Font*     m_fontLg   = nullptr;
     TTF_Font*     m_fontMd   = nullptr;
     TTF_Font*     m_fontSm   = nullptr;

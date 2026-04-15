@@ -13,6 +13,86 @@
 #include <SDL2/SDL_ttf.h>
 #include <curl/curl.h>
 #include <array>
+#include <cstring>
+
+// ---------------------------------------------------------------------------
+// Nintendo Switch controller → SDL_Keycode mapping
+// ---------------------------------------------------------------------------
+// On the Switch SDL2 port, controller buttons arrive as SDL_JOYBUTTONDOWN
+// events with the following indices (combined / handheld controller):
+//   0 = A    1 = B    2 = X    3 = Y
+//   4 = L-Stick click  5 = R-Stick click
+//   6 = L    7 = R
+//   8 = ZL   9 = ZR
+//  10 = Plus (+)  11 = Minus (-)
+//  12 = D-Left  13 = D-Up  14 = D-Right  15 = D-Down
+// ---------------------------------------------------------------------------
+static SDL_Keycode joyButtonToKey(Uint8 button) {
+    switch (button) {
+    case 0:  return SDLK_RETURN;   // A  → confirm / select
+    case 1:  return SDLK_b;        // B  → back / cancel
+    case 2:  return SDLK_x;        // X  → save / download
+    case 3:  return SDLK_y;        // Y  → search / filter
+    case 6:  return SDLK_PAGEUP;   // L  → page up
+    case 7:  return SDLK_PAGEDOWN; // R  → page down
+    case 12: return SDLK_LEFT;     // D-Left
+    case 13: return SDLK_UP;       // D-Up
+    case 14: return SDLK_RIGHT;    // D-Right
+    case 15: return SDLK_DOWN;     // D-Down
+    default: return SDLK_UNKNOWN;
+    }
+}
+
+// Translate joystick button presses into the SDL_KEYDOWN events that every
+// Screen already handles.  Returns true when *out* has been filled in.
+static bool translateJoyButton(const SDL_Event& in, SDL_Event& out) {
+    if (in.type != SDL_JOYBUTTONDOWN) return false;
+
+    // Plus button (10) → generate an SDL_QUIT so the app exits cleanly.
+    if (in.jbutton.button == 10) {
+        std::memset(&out, 0, sizeof(out));
+        out.type = SDL_QUIT;
+        return true;
+    }
+
+    SDL_Keycode key = joyButtonToKey(in.jbutton.button);
+    if (key == SDLK_UNKNOWN) return false;
+
+    std::memset(&out, 0, sizeof(out));
+    out.type           = SDL_KEYDOWN;
+    out.key.keysym.sym = key;
+    return true;
+}
+
+// Translate left-stick axis motion into D-pad–style key events.
+// A simple threshold + edge-detect approach avoids flooding the screen with
+// repeated events while the stick is held.
+static constexpr Sint16 STICK_DEADZONE = 16000;
+
+static bool translateJoyAxis(const SDL_Event& in, SDL_Event& out,
+                             bool& stickUp, bool& stickDown) {
+    if (in.type != SDL_JOYAXISMOTION) return false;
+    // Left stick Y-axis is axis 1 on the Switch SDL2 port
+    if (in.jaxis.axis != 1) return false;
+
+    Sint16 val = in.jaxis.value;
+    bool wantUp   = (val < -STICK_DEADZONE);
+    bool wantDown = (val >  STICK_DEADZONE);
+
+    SDL_Keycode key = SDLK_UNKNOWN;
+    if (wantUp && !stickUp)        key = SDLK_UP;
+    else if (wantDown && !stickDown) key = SDLK_DOWN;
+
+    stickUp   = wantUp;
+    stickDown = wantDown;
+
+    if (key == SDLK_UNKNOWN) return false;
+
+    std::memset(&out, 0, sizeof(out));
+    out.type           = SDL_KEYDOWN;
+    out.key.keysym.sym = key;
+    return true;
+}
 
 // ---------------------------------------------------------------------------
 // UI layout constants shared across the app
@@ -135,6 +215,10 @@ bool App::init() {
 
     if (!m_fontLg || !m_fontMd || !m_fontSm) return false;
 
+    // Open the first available joystick (the combined controller on Switch)
+    if (SDL_NumJoysticks() > 0)
+        m_joystick = SDL_JoystickOpen(0);
+
     m_renderer = std::make_unique<Renderer>(m_sdlRend, m_fontLg, m_fontMd, m_fontSm);
     m_config   = romm::loadConfig();
 
@@ -153,6 +237,7 @@ void App::cleanup() {
     m_client.reset();
     m_renderer.reset();
 
+    if (m_joystick) SDL_JoystickClose(m_joystick);
     if (m_fontLg)  TTF_CloseFont(m_fontLg);
     if (m_fontMd)  TTF_CloseFont(m_fontMd);
     if (m_fontSm)  TTF_CloseFont(m_fontSm);
@@ -238,16 +323,22 @@ void App::run() {
     navigateTo("main", 0);
 
     bool running = true;
+    bool stickUp = false, stickDown = false;
     while (running && appletMainLoop()) {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
+            // Translate controller button / stick events to keyboard events
+            // so that every Screen's update() works without modification.
+            SDL_Event translated;
+            if (translateJoyButton(event, translated) ||
+                translateJoyAxis(event, translated, stickUp, stickDown)) {
+                event = translated;
+            }
+
             if (event.type == SDL_QUIT) {
                 running = false;
                 break;
             }
-            // Map joystick / gamepad to keyboard events for uniform handling
-            // (SDL2 on Switch maps buttons to keyboard events automatically
-            //  via the SDL Switch port)
 
             if (m_current && !m_current->update(event)) {
                 running = false;
