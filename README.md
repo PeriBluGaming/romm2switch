@@ -1,5 +1,7 @@
 # RomM2Switch
 
+![logo](icon.jpg)
+
 A Nintendo Switch homebrew application (NRO) that connects to your self-hosted
 [RomM](https://github.com/rommapp/romm) installation and lets you browse and
 download ROMs directly to your SD card.
@@ -22,7 +24,7 @@ download ROMs directly to your SD card.
 ## Requirements
 
 - Nintendo Switch with **Custom Firmware** (Atmosphère or similar)
-- A running [RomM](https://github.com/rommapp/romm) instance reachable from
+- A running [RomM](https://github.com/rommapp/romm) instance (Version 4.7.0) reachable from
   your local network (HTTP or HTTPS; self-signed certificates are accepted)
 
 ---
