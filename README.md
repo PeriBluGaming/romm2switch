@@ -141,7 +141,7 @@ For example: `sdmc:/roms/snes/Super Mario World.sfc`
 
 ## API Compatibility
 
-Tested against **RomM v4.8.1**.  Authentication uses **HTTP Basic Auth**
+Tested against **RomM v4.8.1**. Authentication uses **HTTP Basic Auth**, with credentials sent on each request (there is no dedicated login endpoint).
 
 The following endpoints are used:
 
