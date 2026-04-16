@@ -27,7 +27,7 @@ download ROMs directly to your SD card.
 ## Requirements
 
 - Nintendo Switch with **Custom Firmware** (Atmosphère or similar)
-- A running [RomM](https://github.com/rommapp/romm) instance (Version 4.7.0) reachable from
+- A running [RomM](https://github.com/rommapp/romm) instance (**RomM v4.8.1**) reachable from
   your local network (HTTP or HTTPS; self-signed certificates are accepted)
 
 ![Browse Grid View](docs/images/game-list-grid.jpg)
@@ -141,7 +141,7 @@ For example: `sdmc:/roms/snes/Super Mario World.sfc`
 
 ## API Compatibility
 
-Tested against **RomM v3.x / v4.x**.  Authentication uses **HTTP Basic Auth** — credentials are sent with every request (no login endpoint required).
+Tested against **RomM v4.8.1**.  Authentication uses **HTTP Basic Auth**
 
 The following endpoints are used:
 
