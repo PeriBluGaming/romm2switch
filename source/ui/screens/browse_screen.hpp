@@ -1,143 +1,170 @@
 #pragma once
 
+#include "api/romm_client.hpp"
+#include "models/models.hpp"
+#include "ui/download_queue.hpp"
 #include "ui/renderer.hpp"
 #include "ui/screens/screen.hpp"
-#include "models/models.hpp"
-#include "api/romm_client.hpp"
 
-#include <vector>
-#include <string>
-#include <unordered_map>
-#include <unordered_set>
+#include <atomic>
 #include <deque>
 #include <mutex>
+#include <string>
 #include <thread>
-#include <atomic>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
-// ---------------------------------------------------------------------------
-// BrowseScreen — unified browsing with sidebar + content area
-//
-// Layout:
-//   [=============== HEADER (60px) ================]
-//   [  SIDEBAR  |       CONTENT AREA               ]
-//   [  (300px)  |       (980px)                     ]
-//   [           |  List view  OR  Grid view         ]
-//   [=============== STATUS (44px) ================]
-//
-// Sidebar: Tabs (Platforms / Collections) + scrollable item list
-// Content: List or Grid of ROMs with optional cover images
-// ---------------------------------------------------------------------------
-
-enum class BrowseTab  { Platforms, Collections };
-enum class ViewMode   { List, Grid };
-enum class BrowsePane { Sidebar, Content };
+enum class MainTab { Start = 0, Platforms, Collections, Search, Queues };
+enum class ViewMode { List, Grid };
+enum class FocusArea {
+    HeaderTabs,
+    HeaderSettings,
+    Start,
+    Platforms,
+    Collections,
+    SearchBox,
+    SearchResults,
+    Queues
+};
 
 class BrowseScreen : public Screen {
 public:
     BrowseScreen(Renderer& renderer, NavigateFn navigate,
-                 romm::RommClient& client);
+                 romm::RommClient* client,
+                 bool hasConfig,
+                 bool loggedIn,
+                 std::string loginError,
+                 DownloadQueue& downloads);
     ~BrowseScreen() override;
 
     void onEnter() override;
     bool update(const SDL_Event& event) override;
     void render() override;
+    void setSessionState(romm::RommClient* client,
+                         bool hasConfig,
+                         bool loggedIn,
+                         const std::string& loginError);
 
 private:
-    romm::RommClient& m_client;
+    romm::RommClient* m_client;
+    bool              m_hasConfig;
+    bool              m_loggedIn;
+    std::string       m_loginError;
+    DownloadQueue&    m_downloads;
 
-    // --- Sidebar data ---
-    BrowseTab                       m_tab = BrowseTab::Platforms;
-    std::vector<romm::Platform>     m_platforms;
-    std::vector<romm::Collection>   m_collections;
-    bool                            m_loadingSidebar = true;
-    std::string                     m_sidebarError;
+    MainTab   m_tab = MainTab::Start;
+    FocusArea m_focus = FocusArea::Start;
+    ViewMode  m_viewMode = ViewMode::List;
 
-    // --- Content data ---
-    std::vector<romm::Rom>          m_games;
-    bool                            m_loadingGames = false;
-    std::string                     m_gamesError;
-    int                             m_loadedContextId = -1; // track which id is loaded
+    std::vector<romm::Platform>   m_platforms;
+    std::vector<romm::Collection> m_collections;
+    bool                          m_loadingLibrary = true;
+    std::string                   m_libraryError;
 
-    // --- Focus & selection ---
-    BrowsePane m_focusPane      = BrowsePane::Sidebar;
-    int        m_sidebarSel     = 0;
-    int        m_sidebarScroll  = 0;
-    int        m_contentSel     = 0;
-    int        m_contentScroll  = 0;
+    int         m_platformSel = 0;
+    int         m_platformScroll = 0;
+    int         m_collectionSel = 0;
+    int         m_collectionScroll = 0;
+    int         m_startSel = 0;
+    int         m_queueSel = 0;
+    int         m_queueScroll = 0;
 
-    // --- View mode ---
-    ViewMode   m_viewMode = ViewMode::List;
+    int                    m_platformContextId = -1;
+    std::string            m_platformContextName;
+    std::vector<romm::Rom> m_platformGames;
+    int                    m_platformGameSel = 0;
+    int                    m_platformGameScroll = 0;
+    bool                   m_loadingPlatformGames = false;
+    std::string            m_platformGamesError;
 
-    // --- Cover image cache ---
+    int                    m_collectionContextId = -1;
+    std::string            m_collectionContextName;
+    std::vector<romm::Rom> m_collectionGames;
+    int                    m_collectionGameSel = 0;
+    int                    m_collectionGameScroll = 0;
+    bool                   m_loadingCollectionGames = false;
+    std::string            m_collectionGamesError;
+
+    std::vector<romm::Rom> m_searchLibrary;
+    std::vector<romm::Rom> m_searchResults;
+    bool                   m_searchIndexLoaded = false;
+    bool                   m_loadingSearch = false;
+    bool                   m_searchEditing = false;
+    std::string            m_searchQuery;
+    std::string            m_searchError;
+    int                    m_searchSel = 0;
+    int                    m_searchScroll = 0;
+
     std::unordered_map<int, SDL_Texture*> m_coverCache;
-    std::unordered_set<int>               m_coverRequested; // IDs already queued
+    std::unordered_set<int>               m_coverRequested;
 
-    // Queue entries: ROM ID + cover path (needed to build the download URL)
     struct CoverRequest { int romId; std::string coverPath; };
-    std::deque<CoverRequest>              m_coverQueue;
-
-    // Background thread for cover downloading
     struct CoverResult { int romId; std::vector<uint8_t> data; };
-    std::thread            m_coverThread;
-    std::atomic<bool>      m_coverStop{false};
-    std::mutex             m_coverMutex;
-    std::deque<CoverResult> m_coverResults;
+    std::deque<CoverRequest> m_coverQueue;
+    std::deque<CoverResult>  m_coverResults;
+    std::thread              m_coverThread;
+    std::atomic<bool>        m_coverStop{false};
+    std::mutex               m_coverMutex;
 
-    // --- Layout constants ---
-    static constexpr int HEADER_H     = 60;
-    static constexpr int STATUS_H     = 44;
-    static constexpr int CONTENT_Y    = HEADER_H;
-    static constexpr int CONTENT_H    = SCREEN_H - HEADER_H - STATUS_H;
+    static constexpr int HEADER_H        = 104;
+    static constexpr int STATUS_H        = 44;
+    static constexpr int CONTENT_Y       = HEADER_H;
+    static constexpr int CONTENT_H       = SCREEN_H - HEADER_H - STATUS_H;
+    static constexpr int CONTENT_X       = 28;
+    static constexpr int CONTENT_W       = SCREEN_W - CONTENT_X * 2;
+    static constexpr int SECTION_TOP_PAD = 28;
+    static constexpr int LIST_ITEM_H     = 76;
+    static constexpr int GRID_CELL_W     = 210;
+    static constexpr int GRID_CELL_H     = 248;
+    static constexpr int GRID_PAD        = 18;
+    static constexpr int GRID_IMG_H      = 184;
+    static constexpr int SEARCH_BOX_H    = 56;
+    static constexpr int QUEUE_VISIBLE   = 6;
 
-    static constexpr int SIDEBAR_W    = 300;
-    static constexpr int MAIN_X       = SIDEBAR_W;
-    static constexpr int MAIN_W       = SCREEN_W - SIDEBAR_W;
+    void loadLibrary();
+    void loadPlatformGames();
+    void loadCollectionGames();
+    void ensureSearchIndex();
+    void applySearch();
 
-    // Sidebar
-    static constexpr int TAB_H        = 40;
-    static constexpr int SIDEBAR_ITEM_H  = 48;
-    static constexpr int SIDEBAR_LIST_Y  = CONTENT_Y + TAB_H;
-    static constexpr int SIDEBAR_LIST_H  = CONTENT_H - TAB_H;
-    static constexpr int SIDEBAR_VISIBLE = SIDEBAR_LIST_H / SIDEBAR_ITEM_H;
-
-    // List view
-    static constexpr int LIST_ITEM_H  = 70;
-    static constexpr int LIST_VISIBLE = CONTENT_H / LIST_ITEM_H;
-
-    // Grid view
-    static constexpr int GRID_CELL_W  = 175;
-    static constexpr int GRID_CELL_H  = 240;
-    static constexpr int GRID_PAD     = 12;
-    static constexpr int GRID_IMG_H   = 190;
-
-    // --- Helper methods ---
-    int  sidebarCount() const;
-    int  gameCount() const;
+    int  listVisibleRows(int topOffset = 0) const;
     int  gridColumns() const;
-    int  gridVisibleRows() const;
-    int  gridTotalRows() const;
-    void clampSidebar();
-    void clampContentList();
-    void clampContentGrid();
+    int  gridVisibleRows(int topOffset = 0) const;
+    void clampSelection(int& selected, int& scroll, int count, int visible) const;
+    void clampGridSelection(int& selected, int& scroll, int count, int visibleRows) const;
+    void moveHeaderToBody();
+    void switchTab(int delta);
+    void toggleViewMode();
+    void leaveSearchEditing();
+    bool clientReady() const;
 
-    void loadSidebar();
-    void loadGamesForSelection();
+    void handleHeaderTabsInput(SDL_Keycode key);
+    void handleHeaderSettingsInput(SDL_Keycode key);
+    void handleStartInput(SDL_Keycode key);
+    void handlePlatformInput(SDL_Keycode key);
+    void handleCollectionInput(SDL_Keycode key);
+    void handleSearchBoxInput(SDL_Keycode key);
+    void handleSearchResultsInput(SDL_Keycode key);
+    void handleQueueInput(SDL_Keycode key);
 
-    // Input
-    void handleSidebarInput(SDL_Keycode key);
-    void handleContentInput(SDL_Keycode key);
-    void handleContentListInput(SDL_Keycode key);
-    void handleContentGridInput(SDL_Keycode key);
-    void switchTab();
+    void renderHeader();
+    void renderStartTab();
+    void renderPlatformsTab();
+    void renderCollectionsTab();
+    void renderSearchTab();
+    void renderQueuesTab();
+    void renderDisconnectedState(const std::string& title, const std::string& body);
+    void renderCollectionLikeGrid(const std::vector<romm::Platform>& items, int selected, int scroll, bool focused);
+    void renderCollectionLikeList(const std::vector<romm::Platform>& items, int selected, int scroll, bool focused);
+    void renderCollectionLikeGrid(const std::vector<romm::Collection>& items, int selected, int scroll, bool focused);
+    void renderCollectionLikeList(const std::vector<romm::Collection>& items, int selected, int scroll, bool focused);
+    void renderGameGrid(const std::vector<romm::Rom>& games, int selected, int scroll, bool focused, int topOffset = 0);
+    void renderGameList(const std::vector<romm::Rom>& games, int selected, int scroll, bool focused, int topOffset = 0);
+    void renderQueueList(const std::vector<QueueItemSnapshot>& items);
 
-    // Rendering
-    void renderSidebar();
-    void renderContent();
-    void renderListView();
-    void renderGridView();
-
-    // Cover image management
     void requestVisibleCovers();
+    void requestCover(int romId, const std::string& path);
     void processCoverResults();
     void coverWorker();
     void clearCovers();

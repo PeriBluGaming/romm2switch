@@ -1,13 +1,12 @@
 #pragma once
 
 #include "ui/renderer.hpp"
+#include "ui/download_queue.hpp"
 #include "ui/screens/screen.hpp"
 #include "models/models.hpp"
 #include "api/romm_client.hpp"
 #include "config.hpp"
 
-#include <atomic>
-#include <thread>
 #include <string>
 #include <vector>
 
@@ -18,6 +17,7 @@ class DetailScreen : public Screen {
 public:
     DetailScreen(Renderer& renderer, NavigateFn navigate,
                  romm::RommClient& client, const romm::Config& config,
+                 DownloadQueue& downloads,
                  int romId);
     ~DetailScreen() override;
 
@@ -28,6 +28,7 @@ public:
 private:
     romm::RommClient& m_client;
     romm::Config      m_config;
+    DownloadQueue&    m_downloads;
     int               m_romId;
     romm::Rom         m_rom;
 
@@ -38,14 +39,9 @@ private:
     SDL_Texture* m_coverTex = nullptr;
 
     // Download state
-    enum class DownloadState { Idle, Downloading, Done, Failed };
+    enum class DownloadState { Idle, Queued };
     DownloadState          m_dlState   = DownloadState::Idle;
-    std::atomic<long long> m_dlRecv{0};
-    std::atomic<long long> m_dlTotal{1};
-    std::atomic<bool>      m_dlCancel{false};
-    std::string            m_dlError;
-    std::thread            m_dlThread;
-    std::string            m_dlDestPath;
+    std::string            m_dlStatus;
 
     static constexpr int HEADER_H  = 60;
     static constexpr int STATUS_H  = 44;

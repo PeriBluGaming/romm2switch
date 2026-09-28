@@ -43,7 +43,7 @@ bool LoginScreen::update(const SDL_Event& event) {
             SDL_StartTextInput();
             break;
         case SDLK_b:        // B button — go back / cancel edit
-            navigateTo("main", 0);
+            navigateTo("back", 0);
             break;
         case SDLK_x:        // X button — save
         {
@@ -55,7 +55,7 @@ bool LoginScreen::update(const SDL_Event& event) {
             }
             m_statusMsg.clear();
             m_onSave(m_config);
-            navigateTo("main", 0);
+            navigateTo("back", 0);
             break;
         }
         default: break;

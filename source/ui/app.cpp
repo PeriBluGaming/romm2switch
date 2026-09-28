@@ -246,6 +246,7 @@ bool App::init() {
 
     m_renderer = std::make_unique<Renderer>(m_sdlRend, m_fontLg, m_fontMd, m_fontSm);
     m_config   = romm::loadConfig();
+    m_downloadQueue = std::make_unique<DownloadQueue>(m_config);
 
     if (m_config.isConfigured()) {
         m_client = std::make_unique<romm::RommClient>(m_config);
@@ -260,6 +261,7 @@ void App::cleanup() {
     m_current.reset();
     m_savedBrowse.reset();
     m_client.reset();
+    m_downloadQueue.reset();
     m_renderer.reset();
 
     if (m_joystick) SDL_JoystickClose(m_joystick);
@@ -280,7 +282,7 @@ void App::cleanup() {
 void App::navigateTo(const std::string& name, int id) {
     // When navigating to "detail" from the browse screen, preserve it
     // so the user returns to the same platform/collection selection.
-    if (name == "detail" && m_current && !m_savedBrowse) {
+    if ((name == "detail" || name == "settings") && m_current && !m_savedBrowse) {
         m_savedBrowse = std::move(m_current);
     }
 
@@ -292,7 +294,7 @@ void App::navigateTo(const std::string& name, int id) {
     }
 
     // Discard stale saved browse for any other navigation target.
-    if (name != "detail") {
+    if (name != "detail" && name != "settings") {
         m_savedBrowse.reset();
     }
 
@@ -306,28 +308,32 @@ void App::navigateTo(const std::string& name, int id) {
 std::unique_ptr<Screen> App::makeScreen(const std::string& name, int id) {
     auto nav = [this](const std::string& n, int i) { navigateTo(n, i); };
 
-    if (name == "main") {
-        return std::make_unique<MainMenuScreen>(
-            *m_renderer, nav, m_config.isConfigured(),
-            m_loggedIn, m_loginError);
-    }
-
     if (name == "settings") {
         return std::make_unique<LoginScreen>(
             *m_renderer, nav, m_config,
             [this](const romm::Config& cfg) {
                 m_config = cfg;
                 romm::saveConfig(m_config);
+                if (m_downloadQueue) m_downloadQueue->updateConfig(m_config);
                 // Re-create client with new config and test login
                 m_client = std::make_unique<romm::RommClient>(m_config);
                 m_loginError.clear();
                 m_loggedIn = m_client->login(m_loginError);
+                auto syncBrowse = [this](std::unique_ptr<Screen>& screen) {
+                    if (auto* browse = dynamic_cast<BrowseScreen*>(screen.get())) {
+                        browse->setSessionState(m_client.get(), m_config.isConfigured(),
+                                                m_loggedIn, m_loginError);
+                    }
+                };
+                syncBrowse(m_current);
+                syncBrowse(m_savedBrowse);
             });
     }
 
-    if (name == "browse") {
-        if (!m_client) return makeScreen("main", 0);
-        return std::make_unique<BrowseScreen>(*m_renderer, nav, *m_client);
+    if (name == "main" || name == "browse") {
+        return std::make_unique<BrowseScreen>(
+            *m_renderer, nav, m_client.get(), m_config.isConfigured(),
+            m_loggedIn, m_loginError, *m_downloadQueue);
     }
 
     if (name == "platforms") {
@@ -355,13 +361,11 @@ std::unique_ptr<Screen> App::makeScreen(const std::string& name, int id) {
     if (name == "detail") {
         if (!m_client) return makeScreen("main", 0);
         return std::make_unique<DetailScreen>(
-            *m_renderer, nav, *m_client, m_config, id);
+            *m_renderer, nav, *m_client, m_config, *m_downloadQueue, id);
     }
 
     if (name == "back") {
-        // Navigate back to the browse screen; in a more complex app
-        // this could be a proper navigation stack.
-        return makeScreen("browse", 0);
+        return makeScreen("main", 0);
     }
 
     return nullptr;
@@ -370,7 +374,7 @@ std::unique_ptr<Screen> App::makeScreen(const std::string& name, int id) {
 void App::run() {
     if (!init()) return;
 
-    // Start on main menu
+    // Start on the tabbed main UI
     navigateTo("main", 0);
 
     bool running = true;

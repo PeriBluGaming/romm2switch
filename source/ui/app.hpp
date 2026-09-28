@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ui/renderer.hpp"
+#include "ui/download_queue.hpp"
 #include "config.hpp"
 #include "api/romm_client.hpp"
 
@@ -29,6 +30,7 @@ private:
     std::unique_ptr<Renderer>    m_renderer;
     std::unique_ptr<Screen>      m_current;
     std::unique_ptr<Screen>      m_savedBrowse;  // preserved browse screen state
+    std::unique_ptr<DownloadQueue> m_downloadQueue;
 
     romm::Config                 m_config;
     std::unique_ptr<romm::RommClient> m_client;
