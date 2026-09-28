@@ -41,11 +41,11 @@ public:
     void onEnter() override;
     bool update(const SDL_Event& event) override;
     void render() override;
-    void pauseForClientSwap();
+    void pauseForClientSwap() override;
     void setSessionState(romm::RommClient* client,
                          bool hasConfig,
                          bool loggedIn,
-                         const std::string& loginError);
+                         const std::string& loginError) override;
 
 private:
     romm::RommClient* m_client;

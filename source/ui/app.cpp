@@ -313,9 +313,7 @@ std::unique_ptr<Screen> App::makeScreen(const std::string& name, int id) {
             *m_renderer, nav, m_config,
             [this](const romm::Config& cfg) {
                 auto pauseBrowse = [](std::unique_ptr<Screen>& screen) {
-                    if (auto* browse = dynamic_cast<BrowseScreen*>(screen.get())) {
-                        browse->pauseForClientSwap();
-                    }
+                    if (screen) screen->pauseForClientSwap();
                 };
                 pauseBrowse(m_current);
                 pauseBrowse(m_savedBrowse);
@@ -328,8 +326,8 @@ std::unique_ptr<Screen> App::makeScreen(const std::string& name, int id) {
                 m_loginError.clear();
                 m_loggedIn = m_client->login(m_loginError);
                 auto syncBrowse = [this](std::unique_ptr<Screen>& screen) {
-                    if (auto* browse = dynamic_cast<BrowseScreen*>(screen.get())) {
-                        browse->setSessionState(m_client.get(), m_config.isConfigured(),
+                    if (screen) {
+                        screen->setSessionState(m_client.get(), m_config.isConfigured(),
                                                 m_loggedIn, m_loginError);
                     }
                 };
