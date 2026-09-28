@@ -128,9 +128,6 @@ void BrowseScreen::onEnter() {
     m_hasConfig = m_hasConfig || clientReady();
     loadLibrary();
     clearCovers();
-    m_coverStop = false;
-    if (!m_coverThread.joinable())
-        m_coverThread = std::thread(&BrowseScreen::coverWorker, this);
 }
 
 bool BrowseScreen::update(const SDL_Event& event) {

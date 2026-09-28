@@ -23,6 +23,7 @@ void DownloadQueue::updateConfig(const romm::Config& config) {
 void DownloadQueue::enqueue(const romm::Rom& rom, const std::string& destPath) {
     std::lock_guard<std::mutex> lock(m_mutex);
     QueueItem item;
+    item.taskId         = m_nextTaskId++;
     item.romId          = rom.id;
     item.title          = rom.name;
     item.platformName   = rom.platformName;
@@ -40,6 +41,7 @@ std::vector<QueueItemSnapshot> DownloadQueue::items() const {
     out.reserve(m_items.size());
     for (auto it = m_items.rbegin(); it != m_items.rend(); ++it) {
         QueueItemSnapshot snap;
+        snap.taskId           = it->taskId;
         snap.romId            = it->romId;
         snap.title            = it->title;
         snap.platformName     = it->platformName;
@@ -60,25 +62,25 @@ std::vector<QueueItemSnapshot> DownloadQueue::items() const {
 
 void DownloadQueue::workerLoop() {
     while (!m_stop.load()) {
-        int index = -1;
+        long long taskId = 0;
         romm::Config config;
 
         {
             std::lock_guard<std::mutex> lock(m_mutex);
-            for (size_t i = 0; i < m_items.size(); ++i) {
-                if (m_items[i].state == QueueItemState::Queued) {
-                    index = static_cast<int>(i);
-                    m_items[i].state = QueueItemState::Downloading;
-                    m_items[i].bytesReceived = 0;
-                    m_items[i].speedBytesPerSec = 0;
-                    m_items[i].etaSeconds = -1;
+            for (auto& item : m_items) {
+                if (item.state == QueueItemState::Queued) {
+                    taskId = item.taskId;
+                    item.state = QueueItemState::Downloading;
+                    item.bytesReceived = 0;
+                    item.speedBytesPerSec = 0;
+                    item.etaSeconds = -1;
                     config = m_config;
                     break;
                 }
             }
         }
 
-        if (index < 0) {
+        if (taskId == 0) {
             std::this_thread::sleep_for(std::chrono::milliseconds(80));
             continue;
         }
@@ -90,12 +92,16 @@ void DownloadQueue::workerLoop() {
         QueueItemSnapshot current;
         {
             std::lock_guard<std::mutex> lock(m_mutex);
-            current.romId          = m_items[static_cast<size_t>(index)].romId;
-            current.title          = m_items[static_cast<size_t>(index)].title;
-            current.platformName   = m_items[static_cast<size_t>(index)].platformName;
-            current.fileName       = m_items[static_cast<size_t>(index)].fileName;
-            current.coverPathSmall = m_items[static_cast<size_t>(index)].coverPathSmall;
-            current.fileSizeBytes  = m_items[static_cast<size_t>(index)].fileSizeBytes;
+            auto it = std::find_if(m_items.begin(), m_items.end(),
+                                   [taskId](const QueueItem& item) { return item.taskId == taskId; });
+            if (it == m_items.end()) continue;
+            current.taskId         = it->taskId;
+            current.romId          = it->romId;
+            current.title          = it->title;
+            current.platformName   = it->platformName;
+            current.fileName       = it->fileName;
+            current.coverPathSmall = it->coverPathSmall;
+            current.fileSizeBytes  = it->fileSizeBytes;
         }
 
         romm::Rom rom;
@@ -108,12 +114,14 @@ void DownloadQueue::workerLoop() {
 
         const std::string destPath = [&]() {
             std::lock_guard<std::mutex> lock(m_mutex);
-            return m_items[static_cast<size_t>(index)].destPath;
+            auto it = std::find_if(m_items.begin(), m_items.end(),
+                                   [taskId](const QueueItem& item) { return item.taskId == taskId; });
+            return (it == m_items.end()) ? std::string() : it->destPath;
         }();
 
         bool ok = client.downloadRom(
             rom, destPath,
-            [this, index, &lastTick, &lastBytes](long long recv, long long total) {
+            [this, taskId, &lastTick, &lastBytes](long long recv, long long total) {
                 auto now = std::chrono::steady_clock::now();
                 auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastTick).count();
                 long long speed = 0;
@@ -124,7 +132,10 @@ void DownloadQueue::workerLoop() {
                 lastBytes = recv;
 
                 std::lock_guard<std::mutex> lock(m_mutex);
-                auto& item = m_items[static_cast<size_t>(index)];
+                auto it = std::find_if(m_items.begin(), m_items.end(),
+                                       [taskId](const QueueItem& item) { return item.taskId == taskId; });
+                if (it == m_items.end()) return;
+                auto& item = *it;
                 item.bytesReceived = recv;
                 item.bytesTotal = total;
                 item.speedBytesPerSec = std::max(0LL, speed);
@@ -137,7 +148,10 @@ void DownloadQueue::workerLoop() {
             error);
 
         std::lock_guard<std::mutex> lock(m_mutex);
-        auto& item = m_items[static_cast<size_t>(index)];
+        auto it = std::find_if(m_items.begin(), m_items.end(),
+                               [taskId](const QueueItem& item) { return item.taskId == taskId; });
+        if (it == m_items.end()) continue;
+        auto& item = *it;
         if (m_stop.load()) {
             item.state = QueueItemState::Cancelled;
             item.error.clear();

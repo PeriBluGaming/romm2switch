@@ -13,6 +13,7 @@
 enum class QueueItemState { Queued, Downloading, Completed, Failed, Cancelled };
 
 struct QueueItemSnapshot {
+    long long   taskId = 0;
     int         romId = 0;
     std::string title;
     std::string platformName;
@@ -39,6 +40,7 @@ public:
 
 private:
     struct QueueItem {
+        long long   taskId = 0;
         int         romId = 0;
         std::string title;
         std::string platformName;
@@ -60,6 +62,7 @@ private:
     std::deque<QueueItem>    m_items;
     std::thread              m_worker;
     std::atomic<bool>        m_stop{false};
+    long long                m_nextTaskId = 1;
 
     void workerLoop();
 };
