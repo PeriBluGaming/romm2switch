@@ -183,8 +183,15 @@ void BrowseScreen::render() {
     auto& R = m_renderer;
     m_queueSnapshot = m_downloads.items();
 
-    processCoverResults();
-    requestVisibleCovers();
+    bool activeTabShowsCovers =
+        (m_tab == MainTab::Platforms && m_platformContextId >= 0) ||
+        (m_tab == MainTab::Collections && m_collectionContextId >= 0) ||
+        m_tab == MainTab::Search ||
+        m_tab == MainTab::Queues;
+    if (activeTabShowsCovers) {
+        processCoverResults();
+        requestVisibleCovers();
+    }
 
     R.fillRect(0, 0, SCREEN_W, SCREEN_H, Color::Background);
     renderHeader();

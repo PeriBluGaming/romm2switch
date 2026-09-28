@@ -28,6 +28,12 @@ void DownloadQueue::updateConfig(const romm::Config& config) {
 
 void DownloadQueue::enqueue(const romm::Rom& rom, const std::string& destPath) {
     std::lock_guard<std::mutex> lock(m_mutex);
+    for (const auto& existing : m_items) {
+        bool active = existing.state == QueueItemState::Queued ||
+                      existing.state == QueueItemState::Downloading;
+        if (active && existing.romId == rom.id && existing.destPath == destPath)
+            return;
+    }
     QueueItem item;
     item.taskId         = m_nextTaskId++;
     item.romId          = rom.id;
@@ -175,7 +181,6 @@ void DownloadQueue::workerLoop() {
             item.error.clear();
         } else {
             item.state = QueueItemState::Failed;
-            item.bytesReceived = 0;
             item.speedBytesPerSec = 0;
             item.etaSeconds = -1;
             item.error = error;
