@@ -5,6 +5,7 @@
 
 #include <atomic>
 #include <deque>
+#include <memory>
 #include <mutex>
 #include <string>
 #include <thread>
@@ -54,7 +55,7 @@ private:
         long long   fileSizeBytes = 0;
         long long   speedBytesPerSec = 0;
         int         etaSeconds = -1;
-        bool        cancelRequested = false;
+        std::shared_ptr<std::atomic<bool>> cancelFlag;
     };
 
     mutable std::mutex       m_mutex;

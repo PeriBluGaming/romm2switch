@@ -97,6 +97,8 @@ private:
     int                    m_searchSel = 0;
     int                    m_searchScroll = 0;
 
+    std::vector<QueueItemSnapshot> m_queueSnapshot;
+
     std::unordered_map<int, SDL_Texture*> m_coverCache;
     std::unordered_set<int>               m_coverRequested;
 

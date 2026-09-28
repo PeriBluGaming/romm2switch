@@ -12,6 +12,12 @@ DownloadQueue::DownloadQueue(const romm::Config& config)
 
 DownloadQueue::~DownloadQueue() {
     m_stop = true;
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        for (auto& item : m_items) {
+            if (item.cancelFlag) item.cancelFlag->store(true);
+        }
+    }
     if (m_worker.joinable()) m_worker.join();
 }
 
@@ -32,6 +38,7 @@ void DownloadQueue::enqueue(const romm::Rom& rom, const std::string& destPath) {
     item.destPath       = destPath;
     item.bytesTotal     = rom.fileSizeBytes;
     item.fileSizeBytes  = rom.fileSizeBytes;
+    item.cancelFlag     = std::make_shared<std::atomic<bool>>(false);
     m_items.push_back(std::move(item));
 }
 
@@ -90,6 +97,7 @@ void DownloadQueue::workerLoop() {
         auto lastTick = std::chrono::steady_clock::now();
         long long lastBytes = 0;
         QueueItemSnapshot current;
+        std::shared_ptr<std::atomic<bool>> cancelFlag;
         {
             std::lock_guard<std::mutex> lock(m_mutex);
             auto it = std::find_if(m_items.begin(), m_items.end(),
@@ -102,7 +110,9 @@ void DownloadQueue::workerLoop() {
             current.fileName       = it->fileName;
             current.coverPathSmall = it->coverPathSmall;
             current.fileSizeBytes  = it->fileSizeBytes;
+            cancelFlag            = it->cancelFlag;
         }
+        if (!cancelFlag) cancelFlag = std::make_shared<std::atomic<bool>>(false);
 
         romm::Rom rom;
         rom.id             = current.romId;
@@ -144,7 +154,7 @@ void DownloadQueue::workerLoop() {
                 else
                     item.etaSeconds = -1;
             },
-            m_stop,
+            *cancelFlag,
             error);
 
         std::lock_guard<std::mutex> lock(m_mutex);
@@ -152,8 +162,10 @@ void DownloadQueue::workerLoop() {
                                [taskId](const QueueItem& item) { return item.taskId == taskId; });
         if (it == m_items.end()) continue;
         auto& item = *it;
-        if (m_stop.load()) {
+        if (cancelFlag && cancelFlag->load()) {
             item.state = QueueItemState::Cancelled;
+            item.bytesReceived = 0;
+            item.bytesTotal = item.fileSizeBytes;
             item.error.clear();
         } else if (ok) {
             item.state = QueueItemState::Completed;
@@ -163,6 +175,7 @@ void DownloadQueue::workerLoop() {
             item.error.clear();
         } else {
             item.state = QueueItemState::Failed;
+            item.bytesReceived = 0;
             item.speedBytesPerSec = 0;
             item.etaSeconds = -1;
             item.error = error;

@@ -181,6 +181,7 @@ bool BrowseScreen::update(const SDL_Event& event) {
 
 void BrowseScreen::render() {
     auto& R = m_renderer;
+    m_queueSnapshot = m_downloads.items();
 
     processCoverResults();
     requestVisibleCovers();
@@ -878,20 +879,19 @@ void BrowseScreen::renderStartTab() {
         if (i == 0) value = std::to_string(m_platforms.size()) + " platforms";
         else if (i == 1) value = std::to_string(m_collections.size()) + " collections";
         else if (i == 2) value = m_searchIndexLoaded ? std::to_string(m_searchLibrary.size()) + " games indexed" : "Build search index";
-        else value = std::to_string(m_downloads.items().size()) + " tasks";
+        else value = std::to_string(m_queueSnapshot.size()) + " tasks";
         int valueW = R.textWidth(value, R.fontSmall());
         R.drawText(value, panelX + panelW - valueW - 24, y + 28,
                    selected ? Color::TextWhite : Color::TextDim, R.fontSmall());
     }
 
-    auto queueItems = m_downloads.items();
     R.drawText("Recent queue activity", panelX, panelY + 430, Color::TextWhite, R.fontMedium());
-    if (queueItems.empty()) {
+    if (m_queueSnapshot.empty()) {
         R.drawText("No downloads queued yet.", panelX, panelY + 464, Color::TextDim, R.fontSmall());
         return;
     }
-    for (int i = 0; i < std::min(2, static_cast<int>(queueItems.size())); ++i) {
-        const auto& item = queueItems[static_cast<size_t>(i)];
+    for (int i = 0; i < std::min(2, static_cast<int>(m_queueSnapshot.size())); ++i) {
+        const auto& item = m_queueSnapshot[static_cast<size_t>(i)];
         int y = panelY + 462 + i * 40;
         R.drawText(item.title, panelX, y, Color::Text, R.fontSmall());
         std::string meta = item.platformName + "  •  " + queueStateLabel(item.state);
@@ -1055,7 +1055,7 @@ void BrowseScreen::renderQueuesTab() {
     R.drawText("Queues", CONTENT_X, CONTENT_Y + SECTION_TOP_PAD, Color::TextWhite, R.fontLarge());
     R.drawText("Active, pending, completed, and failed downloads.", CONTENT_X, CONTENT_Y + SECTION_TOP_PAD + 34,
                Color::TextDim, R.fontSmall());
-    renderQueueList(m_downloads.items());
+    renderQueueList(m_queueSnapshot);
 }
 
 void BrowseScreen::renderDisconnectedState(const std::string& title, const std::string& body) {
@@ -1326,10 +1326,9 @@ void BrowseScreen::requestVisibleCovers() {
                 }
         }
     } else if (m_tab == MainTab::Queues) {
-        auto items = m_downloads.items();
-        int end = std::min(m_queueScroll + listVisibleRows(80), static_cast<int>(items.size()));
+        int end = std::min(m_queueScroll + listVisibleRows(80), static_cast<int>(m_queueSnapshot.size()));
         for (int i = m_queueScroll; i < end; ++i)
-            requestCover(items[static_cast<size_t>(i)].romId, items[static_cast<size_t>(i)].coverPathSmall);
+            requestCover(m_queueSnapshot[static_cast<size_t>(i)].romId, m_queueSnapshot[static_cast<size_t>(i)].coverPathSmall);
     }
 }
 

@@ -367,7 +367,7 @@ std::unique_ptr<Screen> App::makeScreen(const std::string& name, int id) {
     }
 
     if (name == "detail") {
-        if (!m_client) return makeScreen("main", 0);
+        if (!m_client || !m_loggedIn) return makeScreen("main", 0);
         return std::make_unique<DetailScreen>(
             *m_renderer, nav, *m_client, m_config, *m_downloadQueue, id);
     }
