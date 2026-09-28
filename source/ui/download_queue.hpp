@@ -4,6 +4,7 @@
 #include "models/models.hpp"
 
 #include <atomic>
+#include <deque>
 #include <mutex>
 #include <string>
 #include <thread>
@@ -22,6 +23,7 @@ struct QueueItemSnapshot {
     QueueItemState state = QueueItemState::Queued;
     long long   bytesReceived = 0;
     long long   bytesTotal = 0;
+    long long   fileSizeBytes = 0;
     long long   speedBytesPerSec = 0;
     int         etaSeconds = -1;
 };
@@ -47,6 +49,7 @@ private:
         QueueItemState state = QueueItemState::Queued;
         long long   bytesReceived = 0;
         long long   bytesTotal = 0;
+        long long   fileSizeBytes = 0;
         long long   speedBytesPerSec = 0;
         int         etaSeconds = -1;
         bool        cancelRequested = false;
@@ -54,7 +57,7 @@ private:
 
     mutable std::mutex       m_mutex;
     romm::Config             m_config;
-    std::vector<QueueItem>   m_items;
+    std::deque<QueueItem>    m_items;
     std::thread              m_worker;
     std::atomic<bool>        m_stop{false};
 

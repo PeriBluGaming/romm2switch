@@ -41,6 +41,7 @@ public:
     void onEnter() override;
     bool update(const SDL_Event& event) override;
     void render() override;
+    void pauseForClientSwap();
     void setSessionState(romm::RommClient* client,
                          bool hasConfig,
                          bool loggedIn,

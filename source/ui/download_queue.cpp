@@ -30,6 +30,7 @@ void DownloadQueue::enqueue(const romm::Rom& rom, const std::string& destPath) {
     item.coverPathSmall = rom.coverPathSmall;
     item.destPath       = destPath;
     item.bytesTotal     = rom.fileSizeBytes;
+    item.fileSizeBytes  = rom.fileSizeBytes;
     m_items.push_back(std::move(item));
 }
 
@@ -49,6 +50,7 @@ std::vector<QueueItemSnapshot> DownloadQueue::items() const {
         snap.state            = it->state;
         snap.bytesReceived    = it->bytesReceived;
         snap.bytesTotal       = it->bytesTotal;
+        snap.fileSizeBytes    = it->fileSizeBytes;
         snap.speedBytesPerSec = it->speedBytesPerSec;
         snap.etaSeconds       = it->etaSeconds;
         out.push_back(std::move(snap));
@@ -93,6 +95,7 @@ void DownloadQueue::workerLoop() {
             current.platformName   = m_items[static_cast<size_t>(index)].platformName;
             current.fileName       = m_items[static_cast<size_t>(index)].fileName;
             current.coverPathSmall = m_items[static_cast<size_t>(index)].coverPathSmall;
+            current.fileSizeBytes  = m_items[static_cast<size_t>(index)].fileSizeBytes;
         }
 
         romm::Rom rom;
@@ -100,6 +103,7 @@ void DownloadQueue::workerLoop() {
         rom.name           = current.title;
         rom.platformName   = current.platformName;
         rom.fileName       = current.fileName;
+        rom.fileSizeBytes  = current.fileSizeBytes;
         rom.coverPathSmall = current.coverPathSmall;
 
         const std::string destPath = [&]() {

@@ -91,6 +91,10 @@ BrowseScreen::~BrowseScreen() {
     }
 }
 
+void BrowseScreen::pauseForClientSwap() {
+    stopCoverThread();
+}
+
 void BrowseScreen::setSessionState(romm::RommClient* client,
                                    bool hasConfig,
                                    bool loggedIn,
@@ -114,11 +118,14 @@ void BrowseScreen::setSessionState(romm::RommClient* client,
     } else if (!wasReady || m_platforms.empty()) {
         loadLibrary();
     }
+    if (!m_coverThread.joinable()) {
+        m_coverStop = false;
+        m_coverThread = std::thread(&BrowseScreen::coverWorker, this);
+    }
 }
 
 void BrowseScreen::onEnter() {
     m_hasConfig = m_hasConfig || clientReady();
-    m_focus = FocusArea::Start;
     loadLibrary();
     clearCovers();
     m_coverStop = false;
@@ -881,14 +888,14 @@ void BrowseScreen::renderStartTab() {
     }
 
     auto queueItems = m_downloads.items();
-    R.drawText("Recent queue activity", panelX, panelY + 470, Color::TextWhite, R.fontMedium());
+    R.drawText("Recent queue activity", panelX, panelY + 430, Color::TextWhite, R.fontMedium());
     if (queueItems.empty()) {
-        R.drawText("No downloads queued yet.", panelX, panelY + 504, Color::TextDim, R.fontSmall());
+        R.drawText("No downloads queued yet.", panelX, panelY + 464, Color::TextDim, R.fontSmall());
         return;
     }
-    for (int i = 0; i < std::min(3, static_cast<int>(queueItems.size())); ++i) {
+    for (int i = 0; i < std::min(2, static_cast<int>(queueItems.size())); ++i) {
         const auto& item = queueItems[static_cast<size_t>(i)];
-        int y = panelY + 500 + i * 44;
+        int y = panelY + 462 + i * 40;
         R.drawText(item.title, panelX, y, Color::Text, R.fontSmall());
         std::string meta = item.platformName + "  •  " + queueStateLabel(item.state);
         R.drawText(meta, panelX + 360, y, Color::TextDim, R.fontSmall());

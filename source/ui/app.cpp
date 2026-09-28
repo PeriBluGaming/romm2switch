@@ -312,6 +312,14 @@ std::unique_ptr<Screen> App::makeScreen(const std::string& name, int id) {
         return std::make_unique<LoginScreen>(
             *m_renderer, nav, m_config,
             [this](const romm::Config& cfg) {
+                auto pauseBrowse = [](std::unique_ptr<Screen>& screen) {
+                    if (auto* browse = dynamic_cast<BrowseScreen*>(screen.get())) {
+                        browse->pauseForClientSwap();
+                    }
+                };
+                pauseBrowse(m_current);
+                pauseBrowse(m_savedBrowse);
+
                 m_config = cfg;
                 romm::saveConfig(m_config);
                 if (m_downloadQueue) m_downloadQueue->updateConfig(m_config);
