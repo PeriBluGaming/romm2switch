@@ -68,6 +68,56 @@ static const char* queueStateLabel(QueueItemState state) {
     return "";
 }
 
+static void drawStartIcon(Renderer& renderer, int kind, int x, int y,
+                          SDL_Color color) {
+    SDL_Renderer* target = renderer.sdlRenderer();
+    SDL_SetRenderDrawColor(target, color.r, color.g, color.b, color.a);
+    auto line = [target](int x1, int y1, int x2, int y2) {
+        SDL_RenderDrawLine(target, x1, y1, x2, y2);
+    };
+
+    if (kind == 0) {
+        line(x + 5, y + 10, x + 11, y + 4);
+        line(x + 11, y + 4, x + 31, y + 4);
+        line(x + 31, y + 4, x + 38, y + 11);
+        line(x + 38, y + 11, x + 36, y + 25);
+        line(x + 36, y + 25, x + 29, y + 27);
+        line(x + 29, y + 27, x + 22, y + 20);
+        line(x + 22, y + 20, x + 14, y + 20);
+        line(x + 14, y + 20, x + 8, y + 27);
+        line(x + 8, y + 27, x + 2, y + 24);
+        line(x + 2, y + 24, x + 5, y + 10);
+        renderer.fillRect(x + 8, y + 10, 12, 3, color);
+        renderer.fillRect(x + 12, y + 6, 3, 11, color);
+        renderer.fillRect(x + 27, y + 9, 4, 4, color);
+        renderer.fillRect(x + 33, y + 15, 4, 4, color);
+    } else if (kind == 1) {
+        for (int layer = 0; layer < 3; ++layer) {
+            int offset = layer * 5;
+            line(x + 5, y + 7 + offset, x + 19, y + 1 + offset);
+            line(x + 19, y + 1 + offset, x + 34, y + 7 + offset);
+            line(x + 34, y + 7 + offset, x + 19, y + 14 + offset);
+            line(x + 19, y + 14 + offset, x + 5, y + 7 + offset);
+        }
+    } else if (kind == 2) {
+        const std::array<std::array<int, 2>, 9> circle = {{
+            {{16, 0}}, {{26, 4}}, {{30, 14}}, {{26, 24}}, {{16, 28}},
+            {{6, 24}}, {{2, 14}}, {{6, 4}}, {{16, 0}},
+        }};
+        for (size_t i = 0; i + 1 < circle.size(); ++i)
+            line(x + circle[i][0], y + circle[i][1],
+                 x + circle[i + 1][0], y + circle[i + 1][1]);
+        line(x + 26, y + 25, x + 39, y + 38);
+    } else {
+        line(x + 21, y + 1, x + 21, y + 27);
+        line(x + 11, y + 18, x + 21, y + 28);
+        line(x + 21, y + 28, x + 31, y + 18);
+        line(x + 5, y + 29, x + 5, y + 37);
+        line(x + 5, y + 37, x + 37, y + 37);
+        line(x + 37, y + 37, x + 37, y + 29);
+    }
+}
+
 } // namespace
 
 BrowseScreen::BrowseScreen(Renderer& renderer, NavigateFn navigate,
@@ -184,6 +234,7 @@ void BrowseScreen::render() {
     m_queueSnapshot = m_downloads.items();
 
     bool activeTabShowsCovers =
+        m_tab == MainTab::Start ||
         (m_tab == MainTab::Platforms && m_platformContextId >= 0) ||
         (m_tab == MainTab::Collections && m_collectionContextId >= 0) ||
         m_tab == MainTab::Search ||
@@ -204,23 +255,7 @@ void BrowseScreen::render() {
     case MainTab::Queues:      renderQueuesTab(); break;
     }
 
-    std::string hint = "L/R Tabs  Up/Down Navigate  A Select";
-    if (m_focus == FocusArea::HeaderTabs)
-        hint = "Left/Right Select Tab  Down Enter  A Keep Current";
-    else if (m_focus == FocusArea::HeaderSettings)
-        hint = "A Open Settings  Left Return  Down Close Header";
-    else if (m_tab == MainTab::Start)
-        hint = "Up/Down Navigate  A Open  L/R Tabs";
-    else if (m_tab == MainTab::Platforms || m_tab == MainTab::Collections)
-        hint = "A Open  Y View  B Back  L/R Tabs";
-    else if (m_tab == MainTab::Search)
-        hint = m_searchEditing
-            ? "Type to Search  Enter/B Finish"
-            : "A Search  Y View  B Back  L/R Tabs";
-    else if (m_tab == MainTab::Queues)
-        hint = "Up/Down Navigate  A Details  B Home  L/R Tabs";
-
-    R.drawStatusBar(hint);
+    R.drawStatusBar("[L/R] Select Tab    [D-Pad] Navigate    [A] Open    [B] Back");
 }
 
 void BrowseScreen::loadLibrary() {
@@ -495,10 +530,12 @@ void BrowseScreen::handleHeaderSettingsInput(SDL_Keycode key) {
 void BrowseScreen::handleStartInput(SDL_Keycode key) {
     switch (key) {
     case SDLK_UP:
-        if (m_startSel == 0) m_focus = FocusArea::HeaderTabs;
-        else --m_startSel;
+        m_focus = FocusArea::HeaderTabs;
         break;
-    case SDLK_DOWN:
+    case SDLK_LEFT:
+        if (m_startSel > 0) --m_startSel;
+        break;
+    case SDLK_RIGHT:
         if (m_startSel < 3) ++m_startSel;
         break;
     case SDLK_RETURN:
@@ -812,97 +849,185 @@ void BrowseScreen::handleQueueInput(SDL_Keycode key) {
 
 void BrowseScreen::renderHeader() {
     auto& R = m_renderer;
-    R.fillRect(0, 0, SCREEN_W, HEADER_H, Color::Card);
+    R.fillRect(0, 0, SCREEN_W, HEADER_H, Color::Header);
     R.fillRect(0, HEADER_H - 1, SCREEN_W, 1, Color::Separator);
 
-    R.drawText("RomM2Switch", 24, 16, Color::TextWhite, R.fontLarge());
+    int brandX = 30;
+    R.drawText("RomM2", brandX, 29, Color::TextWhite, R.fontLarge());
+    brandX += R.textWidth("RomM2", R.fontLarge());
+    R.drawText("Switch", brandX, 29, Color::TabActive, R.fontLarge());
 
     SDL_Color statusColor = m_loggedIn ? Color::Success : Color::TextDim;
     std::string status = !m_hasConfig
         ? "Setup required"
         : (m_loggedIn ? "Connected" : "Offline");
-    R.drawText(status, 250, 22, statusColor, R.fontSmall());
+    R.fillRect(274, 40, 10, 10, statusColor);
+    R.drawText(truncateText(status, 118, R.fontSmall(), R),
+               291, 30, statusColor, R.fontSmall());
+    R.drawText("RomM Server", 291, 53, Color::TextDim, R.fontSmall());
+
+    const std::array<const char*, 5> tabs = {
+        "Start", "Platforms", "Collections", "Search", "Queues"
+    };
+    const std::array<int, 5> tabWidths = {94, 128, 140, 102, 111};
+    int tabBarX = 440;
+    int tabBarY = 28;
+    constexpr int tabH = 48;
+    for (int i = 0; i < static_cast<int>(tabs.size()); ++i) {
+        bool active = (i == static_cast<int>(m_tab));
+        bool focused = (m_focus == FocusArea::HeaderTabs) && active;
+        int width = tabWidths[static_cast<size_t>(i)];
+        int x = tabBarX;
+        R.fillRect(x, tabBarY, width, tabH,
+                   active ? Color::CardHover : Color::TabInactive);
+        R.drawRect(x, tabBarY, width, tabH,
+                   active ? Color::TabActive : Color::Separator);
+        if (focused)
+            R.drawRect(x + 1, tabBarY + 1, width - 2, tabH - 2, Color::TabActive);
+        R.drawTextCentered(tabs[static_cast<size_t>(i)], x, tabBarY + 13, width,
+                           active ? Color::TabActive : Color::TextDim, R.fontSmall());
+        tabBarX += width + 4;
+    }
 
     constexpr int settingsW = 150;
-    constexpr int settingsH = 38;
-    int settingsX = SCREEN_W - settingsW - 24;
-    int settingsY = 16;
+    constexpr int settingsH = 48;
+    int settingsX = SCREEN_W - settingsW - 28;
+    int settingsY = 28;
+    R.fillRect(settingsX - 25, 23, 1, 58, Color::Separator);
     bool settingsFocused = (m_focus == FocusArea::HeaderSettings);
     R.fillRect(settingsX, settingsY, settingsW, settingsH,
                settingsFocused ? Color::CardHover : Color::TabInactive);
     R.drawRect(settingsX, settingsY, settingsW, settingsH,
-               settingsFocused ? Color::TextWhite : Color::Separator);
-    R.drawTextCentered("Settings", settingsX, settingsY + 8, settingsW,
-                       Color::TextWhite, R.fontSmall());
-
-    const std::array<const char*, 5> tabs = {"Start", "Platforms", "Collections", "Search", "Queues"};
-    int tabBarX = 24;
-    int tabBarY = 58;
-    int tabBarW = settingsX - tabBarX - 18;
-    int tabW = tabBarW / static_cast<int>(tabs.size());
-    R.fillRect(tabBarX, tabBarY, tabBarW, 34, Color::TabInactive);
-    for (int i = 0; i < static_cast<int>(tabs.size()); ++i) {
-        bool active = (i == static_cast<int>(m_tab));
-        bool focused = (m_focus == FocusArea::HeaderTabs) && active;
-        int x = tabBarX + i * tabW;
-        R.fillRect(x, tabBarY, tabW - 2, 34, active ? Color::CardHover : Color::TabInactive);
-        if (focused)
-            R.drawRect(x, tabBarY, tabW - 2, 34, Color::TextWhite);
-        R.drawTextCentered(tabs[static_cast<size_t>(i)], x, tabBarY + 7, tabW - 2,
-                           active ? Color::TextWhite : Color::TextDim, R.fontSmall());
-    }
+               settingsFocused ? Color::TabActive : Color::Separator);
+    if (settingsFocused)
+        R.drawRect(settingsX + 1, settingsY + 1, settingsW - 2, settingsH - 2,
+                   Color::TabActive);
+    R.drawTextCentered("Settings", settingsX, settingsY + 14, settingsW,
+                       settingsFocused ? Color::TextWhite : Color::TextDim, R.fontSmall());
 }
 
 void BrowseScreen::renderStartTab() {
     auto& R = m_renderer;
     int panelX = CONTENT_X;
-    int panelY = CONTENT_Y + SECTION_TOP_PAD;
+    int panelY = CONTENT_Y + 14;
     int panelW = CONTENT_W;
 
     R.drawText("Start", panelX, panelY, Color::TextWhite, R.fontLarge());
     R.drawText("Quick access to your library, search, and download queue.",
-               panelX, panelY + 34, Color::TextDim, R.fontSmall());
+               panelX, panelY + 38, Color::TextDim, R.fontSmall());
 
-    struct StartRow { const char* title; const char* subtitle; };
-    const std::array<StartRow, 4> rows = {{
-        {"Platforms", "Browse your available systems"},
-        {"Collections", "Open curated RomM collections"},
-        {"Search", "Find a game anywhere in the library"},
-        {"Queues", "Monitor active and previous downloads"},
+    struct StartCard {
+        const char* title;
+        const char* firstLine;
+        const char* secondLine;
+    };
+    const std::array<StartCard, 4> cards = {{
+        {"Platforms", "Browse your available", "systems"},
+        {"Collections", "Open curated RomM", "collections"},
+        {"Search", "Find a game anywhere", "in the library"},
+        {"Queues", "Monitor active and", "previous downloads"},
     }};
 
-    int cardY = panelY + 84;
-    for (int i = 0; i < static_cast<int>(rows.size()); ++i) {
+    constexpr int cardGap = 14;
+    int cardW = (panelW - cardGap * 3) / static_cast<int>(cards.size());
+    int cardY = panelY + 82;
+    constexpr int cardH = 264;
+    for (int i = 0; i < static_cast<int>(cards.size()); ++i) {
         bool selected = (m_focus == FocusArea::Start) && (i == m_startSel);
-        int y = cardY + i * 92;
-        R.fillRect(panelX, y, panelW, 76, selected ? Color::CardHover : Color::Card);
-        R.drawRect(panelX, y, panelW, 76, selected ? Color::TextWhite : Color::Separator);
-        R.drawText(rows[static_cast<size_t>(i)].title, panelX + 22, y + 14,
+        int x = panelX + i * (cardW + cardGap);
+        SDL_Color border = selected ? Color::TabActive : Color::Separator;
+        R.fillRect(x, cardY, cardW, cardH, selected ? Color::CardHover : Color::Card);
+        R.drawRect(x, cardY, cardW, cardH, border);
+        if (selected)
+            R.drawRect(x + 1, cardY + 1, cardW - 2, cardH - 2, Color::TabActive);
+
+        drawStartIcon(R, i, x + 22, cardY + 22,
+                      selected ? Color::TabActive : Color::Text);
+        R.drawText(cards[static_cast<size_t>(i)].title, x + 22, cardY + 84,
                    Color::TextWhite, R.fontMedium());
-        R.drawText(rows[static_cast<size_t>(i)].subtitle, panelX + 22, y + 42,
-                   selected ? Color::TextWhite : Color::TextDim, R.fontSmall());
+        R.drawText(cards[static_cast<size_t>(i)].firstLine, x + 22, cardY + 124,
+                   Color::TextDim, R.fontSmall());
+        R.drawText(cards[static_cast<size_t>(i)].secondLine, x + 22, cardY + 148,
+                   Color::TextDim, R.fontSmall());
 
         std::string value;
         if (i == 0) value = std::to_string(m_platforms.size()) + " platforms";
         else if (i == 1) value = std::to_string(m_collections.size()) + " collections";
-        else if (i == 2) value = m_searchIndexLoaded ? std::to_string(m_searchLibrary.size()) + " games indexed" : "Build search index";
-        else value = std::to_string(m_queueSnapshot.size()) + " tasks";
-        int valueW = R.textWidth(value, R.fontSmall());
-        R.drawText(value, panelX + panelW - valueW - 24, y + 28,
+        else if (i == 2)
+            value = m_searchIndexLoaded ? std::to_string(m_searchLibrary.size()) + " games indexed" : "Build search index";
+        else {
+            int activeTasks = 0;
+            for (const auto& item : m_queueSnapshot)
+                if (item.state == QueueItemState::Queued ||
+                    item.state == QueueItemState::Downloading)
+                    ++activeTasks;
+            value = std::to_string(activeTasks) + " active task" +
+                    (activeTasks == 1 ? "" : "s");
+        }
+        int badgeW = std::min(cardW - 40, R.textWidth(value, R.fontSmall()) + 28);
+        int badgeY = cardY + 205;
+        R.fillRect(x + 16, badgeY, badgeW, 38, Color::TabInactive);
+        R.drawText(value, x + 28, badgeY + 8,
                    selected ? Color::TextWhite : Color::TextDim, R.fontSmall());
+        R.drawText(">", x + cardW - 34, cardY + 210,
+                   selected ? Color::TabActive : Color::TextDim, R.fontMedium());
     }
 
-    R.drawText("Recent queue activity", panelX, panelY + 430, Color::TextWhite, R.fontMedium());
+    int activityY = cardY + cardH + 16;
+    R.drawText("Recent queue activity", panelX, activityY,
+               Color::TextWhite, R.fontMedium());
     if (m_queueSnapshot.empty()) {
-        R.drawText("No downloads queued yet.", panelX, panelY + 464, Color::TextDim, R.fontSmall());
+        R.drawText("No downloads queued yet.", panelX, activityY + 34,
+                   Color::TextDim, R.fontSmall());
         return;
     }
+
     for (int i = 0; i < std::min(2, static_cast<int>(m_queueSnapshot.size())); ++i) {
         const auto& item = m_queueSnapshot[static_cast<size_t>(i)];
-        int y = panelY + 462 + i * 40;
-        R.drawText(item.title, panelX, y, Color::Text, R.fontSmall());
-        std::string meta = item.platformName + "  •  " + queueStateLabel(item.state);
-        R.drawText(meta, panelX + 360, y, Color::TextDim, R.fontSmall());
+        int y = activityY + 36 + i * 69;
+        R.fillRect(panelX, y, panelW, 64, Color::Card);
+        R.drawRect(panelX, y, panelW, 64, Color::Separator);
+
+        auto cover = m_coverCache.find(item.romId);
+        if (cover != m_coverCache.end() && cover->second) {
+            R.drawTextureFit(cover->second, panelX + 6, y + 4, 48, 56);
+        } else {
+            R.fillRect(panelX + 6, y + 4, 48, 56, Color::TabInactive);
+            R.drawTextCentered("ROM", panelX + 6, y + 22, 48,
+                               Color::TextDim, R.fontSmall());
+        }
+
+        int textX = panelX + 66;
+        R.drawText(truncateText(item.title, 390, R.fontMedium(), R),
+                   textX, y + 7, Color::TextWhite, R.fontMedium());
+        R.drawText(truncateText(item.platformName, 390, R.fontSmall(), R),
+                   textX, y + 36, Color::TextDim, R.fontSmall());
+
+        SDL_Color stateColor = Color::TextDim;
+        if (item.state == QueueItemState::Downloading) stateColor = Color::TabActive;
+        else if (item.state == QueueItemState::Completed) stateColor = Color::Success;
+        else if (item.state == QueueItemState::Failed) stateColor = Color::Error;
+        R.drawText(queueStateLabel(item.state), panelX + 510, y + 20,
+                   stateColor, R.fontSmall());
+
+        if (item.state == QueueItemState::Downloading) {
+            int barX = panelX + 650;
+            float progress = item.bytesTotal > 0
+                ? std::clamp(static_cast<float>(item.bytesReceived) /
+                             static_cast<float>(item.bytesTotal), 0.0f, 1.0f)
+                : 0.0f;
+            R.drawProgressBar(barX, y + 27, 150, 8, progress);
+            std::string progressText = item.bytesTotal > 0
+                ? std::to_string(static_cast<int>(progress * 100.0f)) + "%  " +
+                    formatBytes(item.bytesReceived) + " / " + formatBytes(item.bytesTotal)
+                : formatBytes(item.bytesReceived) + " downloaded";
+            R.drawText(truncateText(progressText, panelW - (barX - panelX) - 170,
+                                     R.fontSmall(), R),
+                       barX + 164, y + 20, Color::TextDim, R.fontSmall());
+        } else if (item.state == QueueItemState::Failed && !item.error.empty()) {
+            R.drawText(truncateText(item.error, panelW - 670, R.fontSmall(), R),
+                       panelX + 650, y + 20, Color::TextDim, R.fontSmall());
+        }
     }
 }
 
@@ -1287,7 +1412,12 @@ void BrowseScreen::renderQueueList(const std::vector<QueueItemSnapshot>& items) 
 }
 
 void BrowseScreen::requestVisibleCovers() {
-    if (m_tab == MainTab::Platforms && m_platformContextId >= 0) {
+    if (m_tab == MainTab::Start) {
+        int end = std::min(2, static_cast<int>(m_queueSnapshot.size()));
+        for (int i = 0; i < end; ++i)
+            requestCover(m_queueSnapshot[static_cast<size_t>(i)].romId,
+                         m_queueSnapshot[static_cast<size_t>(i)].coverPathSmall);
+    } else if (m_tab == MainTab::Platforms && m_platformContextId >= 0) {
         if (m_viewMode == ViewMode::List) {
             int end = std::min(m_platformGameScroll + listVisibleRows(124), static_cast<int>(m_platformGames.size()));
             for (int i = m_platformGameScroll; i < end; ++i)
