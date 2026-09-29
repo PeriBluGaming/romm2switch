@@ -870,7 +870,7 @@ void BrowseScreen::renderHeader() {
         "Start", "Platforms", "Collections", "Search", "Queues"
     };
     const std::array<int, 5> tabWidths = {94, 128, 140, 102, 111};
-    int tabBarX = 418;
+    int tabBarX = 440;
     int tabBarY = 28;
     constexpr int tabH = 48;
     for (int i = 0; i < static_cast<int>(tabs.size()); ++i) {
