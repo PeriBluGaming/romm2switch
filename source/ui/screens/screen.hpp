@@ -5,6 +5,7 @@
 #include <string>
 
 class Renderer;
+namespace romm { class RommClient; }
 
 // ---------------------------------------------------------------------------
 // Screen — abstract base class for all UI screens
@@ -28,6 +29,17 @@ public:
 
     // Called each frame to render the screen.
     virtual void render() = 0;
+
+    // Optional hook for screens that need to stop background work before the
+    // app swaps shared client state.
+    virtual void pauseForClientSwap() {}
+
+    // Optional hook for screens that want updated session/login state after a
+    // settings save recreated the RomM client.
+    virtual void setSessionState(romm::RommClient* /*client*/,
+                                 bool /*hasConfig*/,
+                                 bool /*loggedIn*/,
+                                 const std::string& /*loginError*/) {}
 
 protected:
     Renderer&  m_renderer;

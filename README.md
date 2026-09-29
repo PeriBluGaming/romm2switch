@@ -14,13 +14,14 @@ download ROMs directly to your SD card.
 
 | Feature | Details |
 |---|---|
-| 🎮 Browse Platforms & Collections | Unified sidebar with tabs to switch between platforms and collections |
-| 📋 List & Grid Views | Toggle between list view and grid view with cover art thumbnails |
-| 🖼️ Cover Art | Game cover images are loaded from RomM and displayed in both views |
-| 🔍 Search ROMs | In-list search / filter by typing |
+| 🏠 Tabbed Home Screen | Start, Platforms, Collections, Search, and Queues are always available from the main navigation |
+| 🎮 Platforms & Collections | Browse platforms and collections in either list or grid view, then open their game libraries |
+| 📋 List & Grid Views | Toggle between list and grid view with the **Y** button while keeping the current selection |
+| 🖼️ Cover Art | Game cover images are loaded from RomM and displayed in game and queue views when available |
+| 🔍 Global Search | Search games by title across the RomM library |
 | ℹ️ ROM Details | See file name, size, platform, region, and summary |
-| ⬇️ Download | Download ROMs to `sdmc:/roms/<platform>/` with a live progress bar |
-| ⚙️ Settings | Configure server URL, credentials, and download path — stored on SD card |
+| ⬇️ Download Queue | Add downloads to a queue and track active, completed, and failed tasks from the Queues tab |
+| ⚙️ Settings | Open Settings from the top-right button on the main interface and return to the previous screen afterward |
 
 ---
 
@@ -95,7 +96,7 @@ docker run --rm -v $(pwd):/build romm2switch make
 
 ## First-Run Configuration
 
-On first launch, select **Settings** from the main menu and fill in:
+On first launch, open the **Settings** button in the top-right corner and fill in:
 
 | Field | Example |
 |---|---|
@@ -113,13 +114,13 @@ Press **X** to save.  The configuration is stored at
 
 | Button | Action |
 |---|---|
-| ↑ / ↓ | Navigate list |
-| ← / → | Switch between sidebar and content (Browse screen) |
+| ↑ / ↓ | Navigate lists, cards, and queue items |
+| ← / → | Move inside grid layouts / move across the header when focused |
 | A / Enter | Select / Confirm / Start editing |
-| B | Back / Return to sidebar |
-| X | Download ROM (on detail screen) / Save settings |
-| Y | Toggle between List and Grid view (Browse screen) |
-| L / R | Switch between Platforms and Collections tabs |
+| B | Back / Return to the previous library level or Start tab |
+| X | Save settings |
+| Y | Toggle between List and Grid view on Platforms, Collections, Search results, and games |
+| L / R | Switch between the main Start / Platforms / Collections / Search / Queues tabs |
 
 > **Note:** The Switch SDL2 port maps Joy-Con / Pro Controller buttons to
 > keyboard key codes automatically. The mapping is:

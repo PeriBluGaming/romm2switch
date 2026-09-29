@@ -6,10 +6,12 @@
 
 DetailScreen::DetailScreen(Renderer& renderer, NavigateFn navigate,
                            romm::RommClient& client, const romm::Config& config,
+                           DownloadQueue& downloads,
                            int romId)
     : Screen(renderer, std::move(navigate))
     , m_client(client)
     , m_config(config)
+    , m_downloads(downloads)
     , m_romId(romId)
 {}
 
@@ -24,9 +26,7 @@ void DetailScreen::onEnter() {
     m_loading  = true;
     m_error.clear();
     m_dlState  = DownloadState::Idle;
-    m_dlError.clear();
-    m_dlRecv   = 0;
-    m_dlTotal  = 1;
+    m_dlStatus.clear();
     if (m_coverTex) {
         SDL_DestroyTexture(m_coverTex);
         m_coverTex = nullptr;
@@ -63,40 +63,14 @@ std::string DetailScreen::buildDestPath() const {
 }
 
 void DetailScreen::startDownload() {
-    if (m_dlState == DownloadState::Downloading) return;
     if (m_rom.fileName.empty()) {
-        m_dlError = "No file name available for this ROM.";
-        m_dlState = DownloadState::Failed;
+        m_dlStatus = "No file name available for this ROM.";
         return;
     }
 
-    m_dlDestPath = buildDestPath();
-    m_dlState    = DownloadState::Downloading;
-    m_dlRecv     = 0;
-    m_dlTotal    = (m_rom.fileSizeBytes > 0) ? m_rom.fileSizeBytes : 1;
-    m_dlCancel   = false;
-
-    // Join any previous thread
-    if (m_dlThread.joinable()) m_dlThread.join();
-
-    m_dlThread = std::thread([this]() {
-        std::string err;
-        bool ok = m_client.downloadRom(
-            m_rom, m_dlDestPath,
-            [this](long long recv, long long total) {
-                m_dlRecv  = recv;
-                m_dlTotal = (total > 0) ? total : 1;
-            },
-            m_dlCancel,
-            err);
-
-        if (ok) {
-            m_dlState = DownloadState::Done;
-        } else {
-            m_dlError = err;
-            m_dlState = DownloadState::Failed;
-        }
-    });
+    m_downloads.enqueue(m_rom, buildDestPath());
+    m_dlState  = DownloadState::Queued;
+    m_dlStatus = "Added to queue. Open the Queues tab to follow progress.";
 }
 
 std::vector<std::string> DetailScreen::wrapText(const std::string& text,
@@ -130,19 +104,11 @@ bool DetailScreen::update(const SDL_Event& event) {
         case SDLK_RETURN:
         case SDLK_KP_ENTER:
         case SDLK_x:
-            if (m_dlState == DownloadState::Idle ||
-                m_dlState == DownloadState::Failed ||
-                m_dlState == DownloadState::Done) {
+            if (m_dlState == DownloadState::Idle) {
                 startDownload();
             }
             break;
         case SDLK_b:
-            // Signal download cancellation and wait for the thread to finish
-            // before navigating away to avoid dangling references.
-            if (m_dlState == DownloadState::Downloading) {
-                m_dlCancel = true;
-            }
-            if (m_dlThread.joinable()) m_dlThread.join();
             navigateTo("back", 0);
             break;
         default: break;
@@ -241,69 +207,33 @@ void DetailScreen::render() {
     switch (m_dlState) {
     case DownloadState::Idle:
     {
-        // Draw [X] Download button
         int bw = 300, bh = 46;
         int bx = (SCREEN_W - bw) / 2;
         int by = dlY + 8;
         R.fillRect(bx, by, bw, bh, Color::CardHover);
-        R.drawTextCentered("Download", bx, by + (bh - 26) / 2, bw,
+        R.drawTextCentered("Add to Queue", bx, by + (bh - 26) / 2, bw,
                            Color::TextWhite, R.fontMedium());
+        if (!m_dlStatus.empty()) {
+            R.drawTextCentered(m_dlStatus, 0, dlY + 60, SCREEN_W,
+                               Color::Error, R.fontSmall());
+        }
         break;
     }
-    case DownloadState::Downloading:
+    case DownloadState::Queued:
     {
-        long long recv  = m_dlRecv.load();
-        long long total = m_dlTotal.load();
-        float     pct   = (total > 0) ? static_cast<float>(recv) / total : 0.0f;
-
-        R.drawText("Downloading...", 30, dlY + 8, Color::TextWhite);
-
-        // Build progress string
-        auto fmtSize = [](long long b) -> std::string {
-            if (b < 1024)          return std::to_string(b) + " B";
-            if (b < 1024*1024)     return std::to_string(b/1024) + " KB";
-            if (b < 1024LL*1024*1024) return std::to_string(b/(1024*1024)) + " MB";
-            return std::to_string(b/(1024LL*1024*1024)) + " GB";
-        };
-        std::string progress = fmtSize(recv) + " / " + fmtSize(total);
-        int pw = R.textWidth(progress, R.fontSmall());
-        R.drawText(progress, SCREEN_W - pw - 30, dlY + 10,
-                   Color::TextDim, R.fontSmall());
-
-        R.drawProgressBar(30, dlY + 40, SCREEN_W - 60, 16, pct);
-        break;
-    }
-    case DownloadState::Done:
-    {
-        R.drawTextCentered("Download complete!", 0, dlY + 20,
-                           SCREEN_W, Color::Success, R.fontMedium());
-        // Show destination
-        R.drawTextCentered(m_dlDestPath, 0, dlY + 50, SCREEN_W,
+        R.drawTextCentered("Download queued", 0, dlY + 12, SCREEN_W,
+                           Color::Success, R.fontMedium());
+        R.drawTextCentered(m_dlStatus, 0, dlY + 46, SCREEN_W,
                            Color::TextDim, R.fontSmall());
-        break;
-    }
-    case DownloadState::Failed:
-    {
-        R.drawTextCentered("Download failed: " + m_dlError,
-                           0, dlY + 10, SCREEN_W, Color::Error, R.fontSmall());
-        int bw = 280, bh = 38;
-        int bx = (SCREEN_W - bw) / 2;
-        int by = dlY + 42;
-        R.fillRect(bx, by, bw, bh, Color::Card);
-        R.drawRect(bx, by, bw, bh, Color::CardHover);
-        R.drawTextCentered("Retry (X)", bx, by + (bh - 20) / 2, bw,
-                           Color::TextWhite, R.fontSmall());
         break;
     }
     }
 
     // Status bar
     std::string hint;
-    if (m_dlState == DownloadState::Idle || m_dlState == DownloadState::Failed)
-        hint = "X Download  B Back";
-    else if (m_dlState == DownloadState::Done)
-        hint = "X Download Again  B Back";
+    if (m_dlState == DownloadState::Idle)
+        hint = "X Queue Download  B Back";
     else
-        hint = "Downloading...  B Cancel & Back";
+        hint = "Queued  B Back";
     R.drawStatusBar(hint);
 }
