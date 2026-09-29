@@ -16,23 +16,23 @@ static constexpr int SCREEN_H = 720;
 // UI color palette
 // ---------------------------------------------------------------------------
 namespace Color {
-    static constexpr SDL_Color Background  = {13,  17,  23,  255}; // #0d1117
-    static constexpr SDL_Color Header      = {228,  0,  15,  255}; // #e4000f (Nintendo red)
+    static constexpr SDL_Color Background  = {5,   12,  24,  255};
+    static constexpr SDL_Color Header      = {5,   12,  24,  255};
     static constexpr SDL_Color HeaderText  = {255, 255, 255, 255};
-    static constexpr SDL_Color Card        = {22,  27,  34,  255}; // #161b22
-    static constexpr SDL_Color CardHover   = {31,  111, 235, 255}; // #1f6feb
-    static constexpr SDL_Color Text        = {201, 209, 217, 255}; // #c9d1d9
-    static constexpr SDL_Color TextDim     = {139, 148, 158, 255}; // #8b949e
+    static constexpr SDL_Color Card        = {9,   20,  37,  255};
+    static constexpr SDL_Color CardHover   = {31,  19,  49,  255};
+    static constexpr SDL_Color Text        = {201, 216, 239, 255};
+    static constexpr SDL_Color TextDim     = {143, 166, 199, 255};
     static constexpr SDL_Color TextWhite   = {255, 255, 255, 255};
-    static constexpr SDL_Color Separator   = {48,  54,  61,  255}; // #30363d
-    static constexpr SDL_Color StatusBar   = {22,  27,  34,  255};
-    static constexpr SDL_Color ProgressBg  = {48,  54,  61,  255};
-    static constexpr SDL_Color ProgressFg  = {35,  134,  54, 255}; // #238636 green
+    static constexpr SDL_Color Separator   = {29,  45,  68,  255};
+    static constexpr SDL_Color StatusBar   = {5,   12,  24,  255};
+    static constexpr SDL_Color ProgressBg  = {29,  45,  68,  255};
+    static constexpr SDL_Color ProgressFg  = {221, 45,  240, 255};
     static constexpr SDL_Color Error       = {248,  81,  73, 255}; // #f85149
     static constexpr SDL_Color Success     = {63,  185, 80,  255}; // #3fb950
-    static constexpr SDL_Color SidebarBg   = {17,  21,  28,  255}; // slightly lighter than Background
-    static constexpr SDL_Color TabActive   = {31,  111, 235, 255}; // same as CardHover
-    static constexpr SDL_Color TabInactive = {30,  35,  44,  255};
+    static constexpr SDL_Color SidebarBg   = {8,   18,  33,  255};
+    static constexpr SDL_Color TabActive   = {221, 45,  240, 255};
+    static constexpr SDL_Color TabInactive = {10,  23,  42,  255};
 }
 
 // ---------------------------------------------------------------------------
