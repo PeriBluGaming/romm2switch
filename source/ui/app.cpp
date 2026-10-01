@@ -209,6 +209,7 @@ bool App::init() {
     // libnx services
     socketInitializeDefault();
     plInitialize(PlServiceType_User);
+    m_romfsMounted = R_SUCCEEDED(romfsInit());
 
     // Initialize libcurl once for the process lifetime
     curl_global_init(CURL_GLOBAL_ALL);
@@ -275,6 +276,7 @@ void App::cleanup() {
     IMG_Quit();
     SDL_Quit();
     curl_global_cleanup();
+    if (m_romfsMounted) romfsExit();
     plExit();
     socketExit();
 }

@@ -82,6 +82,11 @@ public:
     // Returns nullptr on failure.
     SDL_Texture* loadTextureFromMemory(const std::vector<uint8_t>& data);
 
+    // Load an SDL_Texture from an image file.
+    // Caller owns the returned texture and must call SDL_DestroyTexture().
+    // Returns nullptr on failure.
+    SDL_Texture* loadTextureFromFile(const std::string& path);
+
     // Draw a texture stretched to fill the given rectangle.
     void drawTexture(SDL_Texture* texture, int x, int y, int w, int h);
 

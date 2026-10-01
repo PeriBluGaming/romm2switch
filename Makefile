@@ -129,17 +129,25 @@ endif
 
 .PHONY: $(BUILD) clean all
 
+PLATFORM_SVGS := $(wildcard $(CURDIR)/assets/platforms/*.svg)
+PLATFORM_PNGS := $(patsubst $(CURDIR)/assets/platforms/%.svg,$(CURDIR)/romfs/assets/platforms/%.png,$(PLATFORM_SVGS))
+
 #---------------------------------------------------------------------------------
 all: $(BUILD)
 
-$(BUILD):
+$(BUILD): $(PLATFORM_PNGS)
 	@[ -d $@ ] || mkdir -p $@
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
+
+$(CURDIR)/romfs/assets/platforms/%.png: $(CURDIR)/assets/platforms/%.svg
+	@mkdir -p $(dir $@)
+	@rsvg-convert --format=png --width=512 --output=$@ $<
 
 #---------------------------------------------------------------------------------
 clean:
 	@echo clean ...
 	@rm -fr $(BUILD) $(TARGET).pfs0 $(TARGET).nso $(TARGET).nro $(TARGET).nacp $(TARGET).elf
+	@rm -f romfs/assets/platforms/*.png
 
 #---------------------------------------------------------------------------------
 else

@@ -6,6 +6,7 @@ build/
 *.nacp
 *.pfs0
 *.map
+/romfs/assets/platforms/*.png
 
 # Editor files
 .vscode/

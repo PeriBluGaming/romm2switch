@@ -42,6 +42,23 @@ static std::string initialsFor(const std::string& text) {
     return out;
 }
 
+static void drawPlatformFallback(Renderer& renderer, int x, int y, int w, int h) {
+    SDL_Renderer* target = renderer.sdlRenderer();
+    SDL_SetRenderDrawColor(target, Color::TextDim.r, Color::TextDim.g,
+                           Color::TextDim.b, Color::TextDim.a);
+    int iconW = 50;
+    int iconH = 34;
+    int iconX = x + (w - iconW) / 2;
+    int iconY = y + (h - iconH - 8) / 2;
+    renderer.drawRect(iconX, iconY, iconW, iconH, Color::TextDim);
+    SDL_RenderDrawLine(target, iconX + 10, iconY + iconH + 4,
+                       iconX + iconW - 10, iconY + iconH + 4);
+    SDL_RenderDrawLine(target, iconX + 18, iconY + iconH,
+                       iconX + 15, iconY + iconH + 4);
+    SDL_RenderDrawLine(target, iconX + iconW - 18, iconY + iconH,
+                       iconX + iconW - 15, iconY + iconH + 4);
+}
+
 static std::string formatBytes(long long bytes) {
     if (bytes < 1024) return std::to_string(bytes) + " B";
     if (bytes < 1024LL * 1024) return std::to_string(bytes / 1024) + " KB";
@@ -137,6 +154,9 @@ BrowseScreen::BrowseScreen(Renderer& renderer, NavigateFn navigate,
 BrowseScreen::~BrowseScreen() {
     stopCoverThread();
     for (auto& [id, tex] : m_coverCache) {
+        if (tex) SDL_DestroyTexture(tex);
+    }
+    for (auto& [slug, tex] : m_platformArtworkCache) {
         if (tex) SDL_DestroyTexture(tex);
     }
 }
@@ -255,7 +275,9 @@ void BrowseScreen::render() {
     case MainTab::Queues:      renderQueuesTab(); break;
     }
 
-    R.drawStatusBar("[L/R] Select Tab    [D-Pad] Navigate    [A] Open    [B] Back");
+    R.drawStatusBar(m_tab == MainTab::Platforms
+        ? "[L/R] Select Tab    [D-Pad] Navigate    [Y] Switch View    [A] Open Platform    [B] Back"
+        : "[L/R] Select Tab    [D-Pad] Navigate    [A] Open    [B] Back");
 }
 
 void BrowseScreen::loadLibrary() {
@@ -398,12 +420,31 @@ int BrowseScreen::gridVisibleRows(int topOffset) const {
     return std::max(1, available / (GRID_CELL_H + GRID_PAD));
 }
 
+int BrowseScreen::platformGridVisibleRows() const {
+    return std::max(1, (CONTENT_H - PLATFORM_GRID_TOP) /
+                            (PLATFORM_GRID_CELL_H + PLATFORM_GRID_GAP));
+}
+
+int BrowseScreen::platformListVisibleRows() const {
+    return std::max(1, (CONTENT_H - PLATFORM_GRID_TOP) /
+                            PLATFORM_LIST_ITEM_H);
+}
+
 void BrowseScreen::clampSelection(int& selected, int& scroll, int count, int visible) const {
     if (count <= 0) { selected = 0; scroll = 0; return; }
     if (selected < 0) selected = 0;
     if (selected >= count) selected = count - 1;
     if (selected < scroll) scroll = selected;
     if (selected >= scroll + visible) scroll = selected - visible + 1;
+}
+
+void BrowseScreen::clampPlatformGridSelection(int& selected, int& scroll, int count) const {
+    if (count <= 0) { selected = 0; scroll = 0; return; }
+    selected = std::clamp(selected, 0, count - 1);
+    int row = selected / 6;
+    int visibleRows = platformGridVisibleRows();
+    if (row < scroll) scroll = row;
+    if (row >= scroll + visibleRows) scroll = row - visibleRows + 1;
 }
 
 void BrowseScreen::clampGridSelection(int& selected, int& scroll, int count, int visibleRows) const {
@@ -457,9 +498,9 @@ void BrowseScreen::toggleViewMode() {
             else
                 clampGridSelection(m_platformGameSel, m_platformGameScroll, static_cast<int>(m_platformGames.size()), gridVisibleRows(124));
         } else if (m_viewMode == ViewMode::List) {
-            clampSelection(m_platformSel, m_platformScroll, static_cast<int>(m_platforms.size()), listVisibleRows(80));
+            clampSelection(m_platformSel, m_platformScroll, static_cast<int>(m_platforms.size()), platformListVisibleRows());
         } else {
-            clampGridSelection(m_platformSel, m_platformScroll, static_cast<int>(m_platforms.size()), gridVisibleRows(80));
+            clampPlatformGridSelection(m_platformSel, m_platformScroll, static_cast<int>(m_platforms.size()));
         }
     } else if (m_tab == MainTab::Collections) {
         if (m_collectionContextId >= 0) {
@@ -573,11 +614,11 @@ void BrowseScreen::handlePlatformInput(SDL_Keycode key) {
                 m_focus = FocusArea::Start;
                 return;
             }
-            clampSelection(m_platformSel, m_platformScroll, count, listVisibleRows(80));
+            clampSelection(m_platformSel, m_platformScroll, count, platformListVisibleRows());
             return;
         }
 
-        int cols = gridColumns();
+        constexpr int cols = 6;
         if (key == SDLK_UP) {
             if (m_platformSel < cols) m_focus = FocusArea::HeaderTabs;
             else m_platformSel -= cols;
@@ -597,7 +638,7 @@ void BrowseScreen::handlePlatformInput(SDL_Keycode key) {
             m_focus = FocusArea::Start;
             return;
         }
-        clampGridSelection(m_platformSel, m_platformScroll, count, gridVisibleRows(80));
+        clampPlatformGridSelection(m_platformSel, m_platformScroll, count);
         return;
     }
 
@@ -1047,18 +1088,46 @@ void BrowseScreen::renderPlatformsTab() {
     }
 
     if (m_platformContextId < 0) {
-        R.drawText("Platforms", CONTENT_X, CONTENT_Y + SECTION_TOP_PAD, Color::TextWhite, R.fontLarge());
-        R.drawText("Choose a platform, then open its library.", CONTENT_X, CONTENT_Y + SECTION_TOP_PAD + 34,
-                   Color::TextDim, R.fontSmall());
+        const int titleY = CONTENT_Y + 14;
+        const int controlsX = CONTENT_X + CONTENT_W - 350;
+        auto drawViewButton = [&](int x, const std::string& label, ViewMode mode) {
+            bool active = m_viewMode == mode;
+            SDL_Color color = active ? Color::TabActive : Color::TextDim;
+            R.fillRect(x, titleY + 1, 136, 38, active ? Color::CardHover : Color::TabInactive);
+            R.drawRect(x, titleY + 1, 136, 38, active ? Color::TabActive : Color::Separator);
+            if (active)
+                R.drawRect(x + 1, titleY + 2, 134, 36, Color::TabActive);
+            if (mode == ViewMode::Grid) {
+                R.fillRect(x + 13, titleY + 11, 7, 7, color);
+                R.fillRect(x + 23, titleY + 11, 7, 7, color);
+                R.fillRect(x + 13, titleY + 21, 7, 7, color);
+                R.fillRect(x + 23, titleY + 21, 7, 7, color);
+            } else {
+                R.fillRect(x + 13, titleY + 12, 5, 5, color);
+                R.fillRect(x + 22, titleY + 13, 19, 3, color);
+                R.fillRect(x + 13, titleY + 22, 5, 5, color);
+                R.fillRect(x + 22, titleY + 23, 19, 3, color);
+            }
+            R.drawText(label, x + 47, titleY + 11, color, R.fontSmall());
+        };
+
+        R.drawText("Platforms", CONTENT_X, titleY, Color::TextWhite, R.fontLarge());
+        R.drawText("Browse your available systems. Select a platform to view games.",
+                   CONTENT_X, titleY + 37, Color::TextDim, R.fontSmall());
+        drawViewButton(controlsX, "Grid View", ViewMode::Grid);
+        drawViewButton(controlsX + 146, "List View", ViewMode::List);
+        std::string count = std::to_string(m_platforms.size()) + " platforms";
+        R.drawText(count, CONTENT_X + CONTENT_W - R.textWidth(count, R.fontSmall()),
+                   titleY + 47, Color::TextDim, R.fontSmall());
         if (m_platforms.empty()) {
-            R.drawText("No platforms available.", CONTENT_X, CONTENT_Y + SECTION_TOP_PAD + 80,
+            R.drawText("No platforms available.", CONTENT_X, CONTENT_Y + PLATFORM_GRID_TOP,
                        Color::TextDim, R.fontSmall());
             return;
         }
         if (m_viewMode == ViewMode::List)
-            renderCollectionLikeList(m_platforms, m_platformSel, m_platformScroll, m_focus == FocusArea::Platforms);
+            renderPlatformList(m_platforms, m_platformSel, m_platformScroll, m_focus == FocusArea::Platforms);
         else
-            renderCollectionLikeGrid(m_platforms, m_platformSel, m_platformScroll, m_focus == FocusArea::Platforms);
+            renderPlatformGrid(m_platforms, m_platformSel, m_platformScroll, m_focus == FocusArea::Platforms);
         return;
     }
 
@@ -1199,51 +1268,90 @@ void BrowseScreen::renderDisconnectedState(const std::string& title, const std::
                    Color::Error, R.fontSmall());
 }
 
-void BrowseScreen::renderCollectionLikeGrid(const std::vector<romm::Platform>& items, int selected, int scroll, bool focused) {
+SDL_Texture* BrowseScreen::platformArtwork(const std::string& slug) {
+    if (slug.empty()) return nullptr;
+    auto cached = m_platformArtworkCache.find(slug);
+    if (cached != m_platformArtworkCache.end()) return cached->second;
+
+    SDL_Texture* texture = nullptr;
+    bool validSlug = std::all_of(slug.begin(), slug.end(), [](unsigned char c) {
+        return std::isalnum(c) || c == '-' || c == '_';
+    });
+    if (validSlug) {
+        texture = m_renderer.loadTextureFromFile(
+            "romfs:/assets/platforms/" + slug + ".png");
+        if (texture)
+            SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
+    }
+    m_platformArtworkCache.emplace(slug, texture);
+    return texture;
+}
+
+void BrowseScreen::renderPlatformGrid(const std::vector<romm::Platform>& items, int selected, int scroll, bool focused) {
     auto& R = m_renderer;
-    int cols = gridColumns();
-    int visibleRows = gridVisibleRows(80);
-    int startY = CONTENT_Y + SECTION_TOP_PAD + 80;
+    constexpr int cols = 6;
+    int visibleRows = platformGridVisibleRows();
+    int startY = CONTENT_Y + PLATFORM_GRID_TOP;
     int totalRows = (static_cast<int>(items.size()) + cols - 1) / cols;
 
     for (int row = scroll; row < std::min(scroll + visibleRows + 1, totalRows); ++row) {
         for (int col = 0; col < cols; ++col) {
             int idx = row * cols + col;
             if (idx >= static_cast<int>(items.size())) break;
-            int x = CONTENT_X + col * (GRID_CELL_W + GRID_PAD);
-            int y = startY + (row - scroll) * (GRID_CELL_H + GRID_PAD);
+            int x = CONTENT_X + col * (PLATFORM_GRID_CELL_W + PLATFORM_GRID_GAP);
+            int y = startY + (row - scroll) * (PLATFORM_GRID_CELL_H + PLATFORM_GRID_GAP);
             bool isSelected = focused && idx == selected;
             const auto& item = items[static_cast<size_t>(idx)];
 
-            R.fillRect(x, y, GRID_CELL_W, GRID_CELL_H, isSelected ? Color::CardHover : Color::Card);
-            R.drawRect(x, y, GRID_CELL_W, GRID_CELL_H, isSelected ? Color::TextWhite : Color::Separator);
-            R.fillRect(x + 18, y + 18, GRID_CELL_W - 36, GRID_IMG_H - 20, Color::Background);
-            R.drawTextCentered(initialsFor(item.name), x, y + 70, GRID_CELL_W,
-                               Color::TextWhite, R.fontLarge());
-            R.drawTextCentered(truncateText(item.name, GRID_CELL_W - 24, R.fontSmall(), R),
-                               x, y + GRID_IMG_H + 12, GRID_CELL_W,
-                               Color::TextWhite, R.fontSmall());
-            R.drawTextCentered(std::to_string(item.romCount) + " games", x, y + GRID_IMG_H + 42, GRID_CELL_W,
-                               Color::TextDim, R.fontSmall());
+            R.fillRect(x, y, PLATFORM_GRID_CELL_W, PLATFORM_GRID_CELL_H,
+                       isSelected ? Color::CardHover : Color::Card);
+            R.drawRect(x, y, PLATFORM_GRID_CELL_W, PLATFORM_GRID_CELL_H,
+                       isSelected ? Color::TabActive : Color::Separator);
+            if (isSelected)
+                R.drawRect(x - 2, y - 2, PLATFORM_GRID_CELL_W + 4,
+                           PLATFORM_GRID_CELL_H + 4, Color::TabActive);
+            R.fillRect(x + 8, y + 7, PLATFORM_GRID_CELL_W - 16, 75, Color::Background);
+            SDL_Texture* artwork = platformArtwork(item.slug);
+            if (artwork) {
+                R.drawTextureFit(artwork, x + 12, y + 9,
+                                 PLATFORM_GRID_CELL_W - 24, 71);
+            } else {
+                drawPlatformFallback(R, x + 8, y + 7, PLATFORM_GRID_CELL_W - 16, 75);
+            }
+            R.drawText(truncateText(item.name, PLATFORM_GRID_CELL_W - 16, R.fontSmall(), R),
+                       x + 8, y + 84, Color::TextWhite, R.fontSmall());
+            R.drawText(std::to_string(item.romCount) + " games", x + 8, y + 106,
+                       Color::TextDim, R.fontSmall());
         }
     }
 }
 
-void BrowseScreen::renderCollectionLikeList(const std::vector<romm::Platform>& items, int selected, int scroll, bool focused) {
+void BrowseScreen::renderPlatformList(const std::vector<romm::Platform>& items, int selected, int scroll, bool focused) {
     auto& R = m_renderer;
-    int startY = CONTENT_Y + SECTION_TOP_PAD + 80;
-    int visible = listVisibleRows(80);
+    int startY = CONTENT_Y + PLATFORM_GRID_TOP;
+    int visible = platformListVisibleRows();
     int end = std::min(scroll + visible, static_cast<int>(items.size()));
     for (int i = scroll; i < end; ++i) {
         const auto& item = items[static_cast<size_t>(i)];
-        int y = startY + (i - scroll) * LIST_ITEM_H;
+        int y = startY + (i - scroll) * PLATFORM_LIST_ITEM_H;
         bool isSelected = focused && i == selected;
-        R.fillRect(CONTENT_X, y, CONTENT_W, LIST_ITEM_H - 4, isSelected ? Color::CardHover : Color::Card);
-        R.drawRect(CONTENT_X, y, CONTENT_W, LIST_ITEM_H - 4, isSelected ? Color::TextWhite : Color::Separator);
-        R.fillRect(CONTENT_X + 16, y + 12, 52, 48, Color::Background);
-        R.drawTextCentered(initialsFor(item.name), CONTENT_X + 16, y + 24, 52, Color::TextWhite, R.fontSmall());
-        R.drawText(item.name, CONTENT_X + 90, y + 14, Color::TextWhite, R.fontMedium());
-        R.drawText(std::to_string(item.romCount) + " games", CONTENT_X + 90, y + 42, Color::TextDim, R.fontSmall());
+        R.fillRect(CONTENT_X, y, CONTENT_W, PLATFORM_LIST_ITEM_H - 4,
+                   isSelected ? Color::CardHover : Color::Card);
+        R.drawRect(CONTENT_X, y, CONTENT_W, PLATFORM_LIST_ITEM_H - 4,
+                   isSelected ? Color::TabActive : Color::Separator);
+        if (isSelected)
+            R.drawRect(CONTENT_X - 2, y - 2, CONTENT_W + 4,
+                       PLATFORM_LIST_ITEM_H, Color::TabActive);
+        R.fillRect(CONTENT_X + 10, y + 7, 66, 54, Color::Background);
+        SDL_Texture* artwork = platformArtwork(item.slug);
+        if (artwork) {
+            R.drawTextureFit(artwork, CONTENT_X + 14, y + 9, 58, 50);
+        } else {
+            drawPlatformFallback(R, CONTENT_X + 10, y + 7, 66, 54);
+        }
+        R.drawText(item.name, CONTENT_X + 92, y + 12, Color::TextWhite, R.fontMedium());
+        R.drawText(std::to_string(item.romCount) + " games", CONTENT_X + 92, y + 42,
+                   Color::TextDim, R.fontSmall());
     }
 }
 
