@@ -101,6 +101,7 @@ private:
 
     std::unordered_map<int, SDL_Texture*> m_coverCache;
     std::unordered_set<int>               m_coverRequested;
+    std::unordered_map<std::string, SDL_Texture*> m_platformArtworkCache;
 
     struct CoverRequest { int romId; std::string coverPath; };
     struct CoverResult { int romId; std::vector<uint8_t> data; };
@@ -122,6 +123,12 @@ private:
     static constexpr int GRID_CELL_H     = 248;
     static constexpr int GRID_PAD        = 18;
     static constexpr int GRID_IMG_H      = 184;
+    static constexpr int PLATFORM_GRID_GAP = 12;
+    static constexpr int PLATFORM_GRID_CELL_W =
+        (CONTENT_W - PLATFORM_GRID_GAP * 5) / 6;
+    static constexpr int PLATFORM_GRID_CELL_H = 132;
+    static constexpr int PLATFORM_GRID_TOP = 86;
+    static constexpr int PLATFORM_LIST_ITEM_H = 76;
     static constexpr int SEARCH_BOX_H    = 56;
     static constexpr int QUEUE_VISIBLE   = 6;
 
@@ -134,8 +141,11 @@ private:
     int  listVisibleRows(int topOffset = 0) const;
     int  gridColumns() const;
     int  gridVisibleRows(int topOffset = 0) const;
+    int  platformGridVisibleRows() const;
+    int  platformListVisibleRows() const;
     void clampSelection(int& selected, int& scroll, int count, int visible) const;
     void clampGridSelection(int& selected, int& scroll, int count, int visibleRows) const;
+    void clampPlatformGridSelection(int& selected, int& scroll, int count) const;
     void moveHeaderToBody();
     void switchTab(int delta);
     void toggleViewMode();
@@ -158,8 +168,8 @@ private:
     void renderSearchTab();
     void renderQueuesTab();
     void renderDisconnectedState(const std::string& title, const std::string& body);
-    void renderCollectionLikeGrid(const std::vector<romm::Platform>& items, int selected, int scroll, bool focused);
-    void renderCollectionLikeList(const std::vector<romm::Platform>& items, int selected, int scroll, bool focused);
+    void renderPlatformGrid(const std::vector<romm::Platform>& items, int selected, int scroll, bool focused);
+    void renderPlatformList(const std::vector<romm::Platform>& items, int selected, int scroll, bool focused);
     void renderCollectionLikeGrid(const std::vector<romm::Collection>& items, int selected, int scroll, bool focused);
     void renderCollectionLikeList(const std::vector<romm::Collection>& items, int selected, int scroll, bool focused);
     void renderGameGrid(const std::vector<romm::Rom>& games, int selected, int scroll, bool focused, int topOffset = 0);
@@ -172,4 +182,5 @@ private:
     void coverWorker();
     void clearCovers();
     void stopCoverThread();
+    SDL_Texture* platformArtwork(const std::string& slug);
 };

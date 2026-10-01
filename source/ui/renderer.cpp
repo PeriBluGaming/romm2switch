@@ -122,6 +122,15 @@ SDL_Texture* Renderer::loadTextureFromMemory(const std::vector<uint8_t>& data) {
     return texture;
 }
 
+SDL_Texture* Renderer::loadTextureFromFile(const std::string& path) {
+    SDL_Surface* surface = IMG_Load(path.c_str());
+    if (!surface) return nullptr;
+
+    SDL_Texture* texture = SDL_CreateTextureFromSurface(m_renderer, surface);
+    SDL_FreeSurface(surface);
+    return texture;
+}
+
 void Renderer::drawTexture(SDL_Texture* texture, int x, int y, int w, int h) {
     if (!texture) return;
     SDL_Rect dst = {x, y, w, h};

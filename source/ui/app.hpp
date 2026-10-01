@@ -35,6 +35,7 @@ private:
     romm::Config                 m_config;
     std::unique_ptr<romm::RommClient> m_client;
     bool                         m_loggedIn = false;
+    bool                         m_romfsMounted = false;
     std::string                  m_loginError;
 
     // Called by screens to switch to a new screen by name + optional id

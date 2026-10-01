@@ -14,6 +14,7 @@ RUN dkp-pacman -Syyu --noconfirm && \
     switch-libjpeg-turbo \
     switch-libwebp \
     switch-libpng \
+    librsvg \
     switch-harfbuzz \
     switch-mesa
 
